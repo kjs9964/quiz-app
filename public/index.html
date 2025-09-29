@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문제풀이 웹앱</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>문제풀이 웹앱</h1>
+        
+        <!-- D-Day 섹션 -->
+        <div class="dday-section">
+            <div id="ddayDisplay">
+                <div class="dday-not-set">📅 시험일을 설정해주세요</div>
+            </div>
+            
+            <div class="dday-controls">
+                <label for="examDateInput">목표 시험일:</label>
+                <input type="date" id="examDateInput" />
+                <button onclick="setExamDate()" class="set-date-btn">설정</button>
+                <button onclick="clearExamDate()" class="clear-date-btn">삭제</button>
+            </div>
+        </div>
+        
+        <!-- 진척도 바 섹션 -->
+        <div id="progressContainer" class="progress-container" style="display: none;">
+            <div class="progress-info">
+                <span id="progressText">진행률: 0/0 (0%)</span>
+                <span id="accuracyText">정답률: 0/0 (0%)</span>
+            </div>
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar low"></div>
+            </div>
+        </div>
+        
+        <div class="exam-selector">
+            <label for="examSelect">회차 선택:</label>
+            <select id="examSelect">
+                <option value="">회차 선택</option>
+                <option value="2003_건설안전기사_1회">2003 건설안전기사 1회</option>
+                <option value="2003_건설안전기사_2회">2003 건설안전기사 2회</option>
+                <option value="2003_건설안전기사_4회">2003 건설안전기사 4회</option>
+                <option value="2025-01">2025-01</option>
+            </select>
+            <button onclick="loadQuestions()">문제 불러오기</button>
+        </div>
+        
+        <div class="wrong-note-controls">
+            <button id="wrongNoteBtn" onclick="loadWrongNoteQuestions()" style="display: none;">오답노트 (0개)</button>
+            <button onclick="clearWrongAnswers()" class="clear-btn">오답노트 전체삭제</button>
+        </div>
+        
+        <div id="modeTitle" class="mode-title"></div>
+        
+        <div id="questionContainer">
+            <!-- 문제가 여기에 표시됩니다 -->
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
