@@ -2,18 +2,17 @@
   "name": "vercel-quiz-app",
   "version": "1.0.0",
   "description": "건설안전기사 문제풀이 웹앱 - Vercel 최적화",
-   "scripts": {
-    "dev": "node -e \"console.log('Use: vercel dev')\"",
-    "build": "echo 'Static files ready'",
-    "start": "vercel dev"
+  "scripts": {
+    "build": "echo 'Static files ready'"
   },
   "keywords": ["quiz", "exam", "construction-safety", "vercel"],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "csv-parse": "^5.5.2"
+    "csv-parse": "^6.0.0",
+    "express": "^5.1.0"
   },
   "devDependencies": {
-    "vercel": "^32.0.0"
+    "nodemon": "^3.1.10"
   }
 }
