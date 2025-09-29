@@ -484,6 +484,7 @@
     <div class="floating-menu">
         <button class="floating-btn btn-dashboard" onclick="goToDashboard()" title="대시보드">📊</button>
         <button class="floating-btn btn-home" onclick="goHome()" title="홈으로">🏠</button>
+        <button class="floating-btn" onclick="goBack()" title="이전 단계" style="background: #f39c12; color: white;">←</button>
     </div>
 
     <script>
@@ -511,22 +512,7 @@
 
         async function loadQuestions() {
             try {
-                // sessionId 확인
-                const sessionId = config.session;
-                console.log('Loading session:', sessionId);
-                
-                if (!sessionId) {
-                    alert('회차 정보가 없습니다. 다시 설정해주세요.');
-                    window.location.href = 'index.html';
-                    return;
-                }
-                
-                const response = await fetch(`/api/exams/${sessionId}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
+                const response = await fetch(`/api/exams/${config.session}`);
                 const data = await response.json();
                 
                 if (data.error) {
@@ -547,18 +533,12 @@
                     totalQuestions = wrongAnswers.length;
                 }
                 
-                if (currentQuestions.length === 0) {
-                    alert('문제가 없습니다.');
-                    return;
-                }
-                
                 document.getElementById('totalNum').textContent = totalQuestions;
                 displayQuestion();
                 
             } catch (error) {
                 console.error('Error loading questions:', error);
-                alert('문제를 불러오는 중 오류가 발생했습니다. 대시보드로 돌아갑니다.');
-                window.location.href = 'quiz.html';
+                alert('문제를 불러오는 중 오류가 발생했습니다.');
             }
         }
 
@@ -819,11 +799,21 @@
         }
 
         function goToDashboard() {
-            window.location.href = 'quiz.html';
+            if (confirm('문제 풀이를 중단하고 대시보드로 돌아가시겠습니까?')) {
+                window.location.href = 'quiz.html';
+            }
         }
 
         function goHome() {
-            window.location.href = 'index.html';
+            if (confirm('문제 풀이를 중단하고 처음부터 다시 시작하시겠습니까?')) {
+                window.location.href = 'index.html';
+            }
+        }
+        
+        function goBack() {
+            if (confirm('문제 풀이를 중단하고 이전 단계로 돌아가시겠습니까?')) {
+                window.location.href = 'quiz.html';
+            }
         }
 
         // 진행률 저장 (페이지를 벗어날 때)

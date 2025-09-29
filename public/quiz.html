@@ -294,3 +294,170 @@
             <button class="action-btn btn-success" onclick="startRandomQuiz()">
                 🎲 랜덤 20문제<br>
                 <small>빠른 실력 점검</small>
+            </button>
+            
+            <button class="action-btn btn-warning" onclick="startTimerQuiz()">
+                ⏰ 타이머 모드<br>
+                <small>실전 시험 환경</small>
+            </button>
+        </div>
+        
+        <div class="recent-activity">
+            <h3 style="color: #2c3e50; margin-bottom: 20px;">최근 학습 활동</h3>
+            
+            <div class="activity-item">
+                <div class="activity-icon icon-correct">✓</div>
+                <div class="activity-content">
+                    <div class="activity-title">안전관리론 15문제 완료</div>
+                    <div class="activity-time">2시간 전 • 정답률 80%</div>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon icon-incorrect">✗</div>
+                <div class="activity-content">
+                    <div class="activity-title">기계안전관리 8문제 오답</div>
+                    <div class="activity-time">어제 • 복습 추천</div>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon icon-correct">✓</div>
+                <div class="activity-content">
+                    <div class="activity-title">전기안전관리 완주</div>
+                    <div class="activity-time">2일 전 • 정답률 95%</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="goBackToSetup()" style="padding: 15px 30px; border: none; background: #95a5a6; color: white; border-radius: 10px; cursor: pointer; margin-right: 15px;">
+                ← 이전 단계 (시험 선택)
+            </button>
+            <button onclick="goToSettings()" style="padding: 15px 30px; border: none; background: #34495e; color: white; border-radius: 10px; cursor: pointer;">
+                설정 변경
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수 선언
+        let config = {};
+        
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard page loaded');
+            loadDashboard();
+        });
+        
+        // 설정 로드 및 초기화
+        function loadDashboard() {
+            try {
+                config = JSON.parse(localStorage.getItem('quizConfig') || '{}');
+                console.log('Dashboard loaded with config:', config);
+                
+                // 제목 설정
+                if (config.session) {
+                    const examTitle = getExamDisplayName(config);
+                    document.getElementById('examTitle').textContent = examTitle;
+                } else {
+                    console.warn('No session in config');
+                    // 설정이 없어도 기본 화면은 보여줌
+                }
+                
+                // D-Day 계산
+                if (config.examDate) {
+                    const examDate = new Date(config.examDate);
+                    const today = new Date();
+                    const daysDiff = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
+                    document.getElementById('ddayValue').textContent = daysDiff > 0 ? `D-${daysDiff}` : 'D-DAY';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+        
+        // 시험 표시명 생성
+        function getExamDisplayName(config) {
+            const examNames = {
+                'construction-safety': '건설안전기사',
+                'industrial-safety': '산업안전기사',
+                'fire-safety': '소방안전기사'
+            };
+            
+            const sessionNames = {
+                'construction-safety-2003-1': '2003년 1회',
+                'construction-safety-2003-2': '2003년 2회',
+                'construction-safety-2003-4': '2003년 4회'
+            };
+            
+            return `${examNames[config.examType] || '시험'} ${sessionNames[config.session] || config.session}`;
+        }
+        
+        // 전체 문제 풀이 시작
+        function startFullQuiz() {
+            console.log('Starting full quiz');
+            localStorage.setItem('quizMode', 'full');
+            startQuiz();
+        }
+        
+        // 오답노트 복습 시작
+        function startWrongQuiz() {
+            console.log('Starting wrong quiz');
+            localStorage.setItem('quizMode', 'wrong');
+            startQuiz();
+        }
+        
+        // 랜덤 문제 시작
+        function startRandomQuiz() {
+            console.log('Starting random quiz');
+            localStorage.setItem('quizMode', 'random');
+            startQuiz();
+        }
+        
+        // 타이머 모드 시작
+        function startTimerQuiz() {
+            console.log('Starting timer quiz');
+            localStorage.setItem('quizMode', 'timer');
+            startQuiz();
+        }
+        
+        // 퀴즈 시작 (페이지 전환)
+        function startQuiz() {
+            // 설정 검증
+            const currentConfig = JSON.parse(localStorage.getItem('quizConfig') || '{}');
+            if (!currentConfig.session) {
+                alert('시험 회차가 설정되지 않았습니다. 처음부터 다시 설정해주세요.');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            console.log('Starting quiz with config:', currentConfig);
+            
+            // 페이지 전환 애니메이션
+            const container = document.querySelector('.dashboard-container');
+            container.style.transform = 'scale(0.9)';
+            container.style.opacity = '0';
+            container.style.transition = 'all 0.3s ease';
+            
+            setTimeout(() => {
+                window.location.href = 'solve.html';
+            }, 300);
+        }
+        
+        // 이전 단계로 돌아가기
+        function goBackToSetup() {
+            console.log('Going back to setup');
+            window.location.href = 'index.html';
+        }
+        
+        // 설정 초기화
+        function goToSettings() {
+            console.log('Resetting settings');
+            localStorage.removeItem('quizConfig');
+            localStorage.removeItem('quizMode');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

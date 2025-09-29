@@ -432,6 +432,8 @@
         }
 
         function prevStep() {
+            if (currentStep === 1) return;
+            
             document.getElementById(`step-${currentStep}`).classList.remove('active');
             document.getElementById(`step${currentStep}`).classList.remove('active');
             
@@ -446,7 +448,15 @@
             }
 
             document.getElementById('nextBtn').textContent = '다음';
-            document.getElementById('nextBtn').disabled = false;
+            
+            // 현재 단계에 따라 nextBtn 활성화 상태 결정
+            if (currentStep === 1) {
+                document.getElementById('nextBtn').disabled = !examDate;
+            } else if (currentStep === 2) {
+                document.getElementById('nextBtn').disabled = !selectedCategory;
+            } else if (currentStep === 3) {
+                document.getElementById('nextBtn').disabled = !selectedExamType;
+            }
         }
 
         function loadExamTypes() {
