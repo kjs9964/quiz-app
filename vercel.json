@@ -4,5 +4,11 @@
     "api/**/*.js": {
       "includeFiles": "public/data/**"
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ]
 }
