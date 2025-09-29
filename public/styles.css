@@ -1,4 +1,4 @@
-/* 깔끔한 게임 스타일 CSS */
+/* 게임 스타일 CSS */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
 * {
@@ -688,16 +688,4 @@ h1::before {
         width: 100%;
         margin: 5px 0;
     }
-}
-
-/* 에러 메시지 */
-.error {
-    color: #dc3545;
-    text-align: center;
-    margin: 20px 0;
-    padding: 15px;
-    background: #f8d7da;
-    border: 2px solid #dc3545;
-    border-radius: 10px;
-    font-weight: 600;
 }

@@ -1,22 +1,19 @@
 {
-  "name": "quiz-app",
+  "name": "vercel-quiz-app",
   "version": "1.0.0",
-  "type": "module",
-  "description": "건설안전기사 문제풀이 웹앱",
-  "main": "index.js",
+  "description": "건설안전기사 문제풀이 웹앱 - Vercel 최적화",
   "scripts": {
-    "dev": "nodemon index.js",
-    "start": "node index.js",
-    "build": "echo 'No build step required'"
+    "dev": "vercel dev",
+    "build": "echo 'Static files ready'",
+    "start": "vercel dev"
   },
-  "keywords": ["quiz", "exam", "construction-safety"],
+  "keywords": ["quiz", "exam", "construction-safety", "vercel"],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "csv-parse": "^6.0.0",
-    "express": "^5.1.0"
+    "csv-parse": "^5.5.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "vercel": "^32.0.0"
   }
 }
