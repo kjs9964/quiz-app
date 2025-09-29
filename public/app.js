@@ -67,7 +67,8 @@ async function loadQuestions() {
     correctAnswers = 0;
     
     try {
-        const response = await fetch(`/api/exams/${examId}`);
+        // 수정된 API 경로
+        const response = await fetch(`/api/exams?id=${encodeURIComponent(examId)}`);
         const data = await response.json();
         
         if (data.error) {

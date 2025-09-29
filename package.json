@@ -1,14 +1,15 @@
 {
   "name": "quiz-app",
   "version": "1.0.0",
-  "description": "",
+  "type": "module",
+  "description": "건설안전기사 문제풀이 웹앱",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
     "build": "echo 'No build step required'"
   },
-  "keywords": [],
+  "keywords": ["quiz", "exam", "construction-safety"],
   "author": "",
   "license": "ISC",
   "dependencies": {
