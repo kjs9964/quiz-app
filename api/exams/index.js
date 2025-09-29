@@ -1,14 +1,20 @@
-import { readdir } from 'fs/promises';
-import { join } from 'path';
-import { parse } from 'path';
+const { readdir } = require('fs').promises;
+const { join, parse } = require('path');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  // CORS 헤더 추가
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const dataPath = join(process.cwd(), 'public', 'data');
+    console.log('Reading directory:', dataPath); // 디버깅용
+    
     const files = await readdir(dataPath);
     
     const csvFiles = files
@@ -19,12 +25,16 @@ export default async function handler(req, res) {
         displayName: getDisplayName(file)
       }));
 
+    console.log('Found CSV files:', csvFiles); // 디버깅용
     res.json(csvFiles);
   } catch (error) {
     console.error('Error reading data directory:', error);
-    res.status(500).json({ error: 'CSV 목록을 불러오는 중 오류가 발생했습니다.' });
+    res.status(500).json({ 
+      error: 'CSV 목록을 불러오는 중 오류가 발생했습니다.',
+      details: error.message 
+    });
   }
-}
+};
 
 function getDisplayName(filename) {
   const name = parse(filename).name;

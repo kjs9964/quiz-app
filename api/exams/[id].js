@@ -1,8 +1,13 @@
-import { readFile } from 'fs/promises';
-import { join } from 'path';
-import { parse } from 'csv-parse/sync';
+const { readFile } = require('fs').promises;
+const { join } = require('path');
+const { parse } = require('csv-parse/sync');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  // CORS 헤더 추가
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -15,6 +20,8 @@ export default async function handler(req, res) {
 
   try {
     const csvPath = join(process.cwd(), 'public', 'data', `${id}.csv`);
+    console.log('Trying to read:', csvPath); // 디버깅용
+    
     const content = await readFile(csvPath, 'utf8');
     
     let records = parse(content, {
@@ -66,6 +73,7 @@ export default async function handler(req, res) {
       };
     });
 
+    console.log(`Loaded ${records.length} questions`); // 디버깅용
     res.json({ 
       examId: id, 
       count: records.length, 
@@ -73,11 +81,11 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error loading exam:', error);
+    console.error('Error in API:', error);
     if (error.code === 'ENOENT') {
       res.status(404).json({ error: '해당 회차 파일이 없습니다.' });
     } else {
-      res.status(500).json({ error: 'CSV 파싱 중 오류가 발생했습니다.' });
+      res.status(500).json({ error: 'CSV 파싱 중 오류가 발생했습니다.', details: error.message });
     }
   }
-}
+};
