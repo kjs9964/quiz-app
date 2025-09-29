@@ -4,7 +4,6 @@ const fs = require("fs");
 const { parse } = require("csv-parse/sync");
 
 const app = express();
-const PORT = 3000;
 
 // 정적 파일 제공 (public 폴더)
 app.use(express.static(path.join(__dirname, "public")));
@@ -13,7 +12,6 @@ app.use(express.static(path.join(__dirname, "public")));
 const dataDir = path.join(__dirname, "data");
 
 // 회차 목록 API
-// 반환 형식: [{ id: "파일명(확장자 제외)", filename: "원본파일명.csv" }, ...]
 app.get("/api/exams", (req, res) => {
   try {
     if (!fs.existsSync(dataDir)) return res.json([]);
@@ -21,7 +19,7 @@ app.get("/api/exams", (req, res) => {
       .readdirSync(dataDir)
       .filter(f => f.toLowerCase().endsWith(".csv"))
       .map(f => ({ 
-        id: encodeURIComponent(path.parse(f).name), // URL 인코딩 적용
+        id: encodeURIComponent(path.parse(f).name),
         filename: f 
       }));
     res.json(files);
@@ -32,14 +30,11 @@ app.get("/api/exams", (req, res) => {
 });
 
 // 특정 회차 CSV → JSON 변환 API
-// 클라이언트는 '/api/exams/파일명(확장자제외)' 로 요청합니다.
 app.get("/api/exams/:id", (req, res) => {
   try {
-    // URL 디코딩 적용
     const examId = decodeURIComponent(req.params.id);
     const csvPath = path.join(__dirname, "data", `${examId}.csv`);
 
-    // 디버그 로그
     console.log("[REQ] Original examId:", req.params.id);
     console.log("[REQ] Decoded examId:", examId);
     console.log("[PATH]", csvPath);
@@ -51,17 +46,14 @@ app.get("/api/exams/:id", (req, res) => {
 
     const content = fs.readFileSync(csvPath, "utf8");
 
-    // 헤더가 있는 CSV 기준으로 파싱
     let records = parse(content, {
       columns: true,
       skip_empty_lines: true,
       trim: true
     });
 
-    // 1~4 → A~D 변환 테이블
     const num2letter = { "1": "A", "2": "B", "3": "C", "4": "D" };
 
-    // 다양한 헤더명 대응하여 매핑
     records = records.map(r => {
       const num = String(
         r["Number"] ?? r["number"] ?? r["No"] ?? r["번호"] ?? r["id"] ?? ""
@@ -79,7 +71,6 @@ app.get("/api/exams/:id", (req, res) => {
       if (num2letter[ans]) ans = num2letter[ans];
       ans = ans.toUpperCase();
 
-      // 추가 필드들 처리
       const testName = r["Test Name"] ?? r["시험명"] ?? "";
       const year = r["Year"] ?? r["연도"] ?? "";
       const session = r["Session"] ?? r["회차"] ?? "";
@@ -97,7 +88,6 @@ app.get("/api/exams/:id", (req, res) => {
         d: a4,
         answer: ans,
         explanation: explanation,
-        // 메타데이터 추가
         testName: testName,
         year: year,
         session: session,
@@ -114,11 +104,17 @@ app.get("/api/exams/:id", (req, res) => {
   }
 });
 
-// 추가: 파일 존재 여부 확인 API (디버깅용)
+// 디버깅 API
 app.get("/api/debug/files", (req, res) => {
   try {
     if (!fs.existsSync(dataDir)) {
-      return res.json({ error: "data 폴더가 존재하지 않습니다.", files: [] });
+      return res.json({ 
+        error: "data 폴더가 존재하지 않습니다.", 
+        files: [],
+        dataDir: dataDir,
+        cwd: process.cwd(),
+        __dirname: __dirname
+      });
     }
     
     const files = fs.readdirSync(dataDir);
@@ -126,6 +122,8 @@ app.get("/api/debug/files", (req, res) => {
     
     res.json({
       dataDir: dataDir,
+      cwd: process.cwd(),
+      __dirname: __dirname,
       allFiles: files,
       csvFiles: csvFiles,
       csvFilesWithEncoding: csvFiles.map(f => ({
@@ -136,20 +134,41 @@ app.get("/api/debug/files", (req, res) => {
     });
   } catch (e) {
     console.error('Error in /api/debug/files:', e);
-    res.status(500).json({ error: "파일 목록 확인 중 오류가 발생했습니다." });
+    res.status(500).json({ 
+      error: "파일 목록 확인 중 오류가 발생했습니다.",
+      errorMessage: e.message,
+      dataDir: dataDir,
+      cwd: process.cwd(),
+      __dirname: __dirname
+    });
   }
 });
 
-// 서버 시작
-app.listen(PORT, () => {
-  console.log(`서버 실행: http://localhost:${PORT}`);
-  console.log(`데이터 폴더: ${dataDir}`);
-  
-  // 시작 시 파일 목록 확인
-  if (fs.existsSync(dataDir)) {
-    const files = fs.readdirSync(dataDir).filter(f => f.toLowerCase().endsWith(".csv"));
-    console.log(`CSV 파일 ${files.length}개 발견:`, files);
+// 모든 라우트를 처리하는 핸들러
+app.get("*", (req, res) => {
+  const filePath = path.join(__dirname, "public", "index.html");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
   } else {
-    console.log("경고: data 폴더가 존재하지 않습니다.");
+    res.status(404).send("Page not found");
   }
 });
+
+// Vercel용 export
+module.exports = app;
+
+// 로컬 개발용
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`서버 실행: http://localhost:${PORT}`);
+    console.log(`데이터 폴더: ${dataDir}`);
+    
+    if (fs.existsSync(dataDir)) {
+      const files = fs.readdirSync(dataDir).filter(f => f.toLowerCase().endsWith(".csv"));
+      console.log(`CSV 파일 ${files.length}개 발견:`, files);
+    } else {
+      console.log("경고: data 폴더가 존재하지 않습니다.");
+    }
+  });
+}
