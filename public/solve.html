@@ -27,6 +27,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
         .header {
             background: rgba(255,255,255,0.95);
             padding: 20px;
@@ -70,7 +75,7 @@
         .timer {
             font-size: 1.2rem;
             font-weight: bold;
-            color: #e74c3c;
+            color: #2ecc71;
         }
         
         .question-card {
@@ -263,14 +268,6 @@
             margin-bottom: 10px;
         }
         
-        .explanation {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 15px;
-            border-left: 4px solid #3498db;
-        }
-        
         .navigation {
             background: white;
             padding: 25px;
@@ -289,23 +286,6 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .nav-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s;
-        }
-        
-        .nav-btn:hover::before {
-            left: 100%;
         }
         
         .btn-prev {
@@ -389,29 +369,6 @@
         .floating-btn:hover {
             transform: scale(1.1);
         }
-        
-        @media (max-width: 768px) {
-            .quiz-container {
-                padding: 10px;
-            }
-            
-            .question-card {
-                padding: 25px;
-            }
-            
-            .header {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .progress-info {
-                justify-content: center;
-            }
-            
-            .floating-menu {
-                right: 10px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -420,13 +377,13 @@
             <div class="exam-info" id="examInfo">건설안전기사 2003년 1회</div>
             <div class="progress-info">
                 <div class="progress-circle">
-                    <div class="circle-bg" style="--progress: 25%;">25%</div>
+                    <div class="circle-bg" style="--progress: 0%;">0%</div>
                 </div>
                 <div>
                     <div class="question-counter" id="questionCounter">1 / 120</div>
                     <div style="color: #7f8c8d; font-size: 0.9rem;">정답률: <span id="accuracyRate">0%</span></div>
                 </div>
-                <div class="timer" id="timer">15:30</div>
+                <div class="timer" id="timer">00:00</div>
             </div>
         </div>
         
@@ -440,34 +397,14 @@
             </div>
             
             <div class="question-text" id="questionText">
-                자체검사 방법의 분류에 속하지 않는 것은?
+                문제를 불러오는 중...
             </div>
             
             <div class="options" id="optionsContainer">
-                <div class="option" onclick="selectAnswer(this, 'A', 1)">
-                    <div class="option-label">A</div>
-                    <div>형식에 의한 검사</div>
-                </div>
-                <div class="option" onclick="selectAnswer(this, 'B', 2)">
-                    <div class="option-label">B</div>
-                    <div>타진에 의한 검사</div>
-                </div>
-                <div class="option" onclick="selectAnswer(this, 'C', 3)">
-                    <div class="option-label">C</div>
-                    <div>검사기기에 의한 검사</div>
-                </div>
-                <div class="option" onclick="selectAnswer(this, 'D', 4)">
-                    <div class="option-label">D</div>
-                    <div>육안에 의한 검사</div>
-                </div>
             </div>
             
             <div class="feedback" id="feedback">
-                <div class="feedback-title">🎉 정답입니다!</div>
-                <div>잘하셨습니다. 다음 문제로 넘어가세요.</div>
-                <div class="explanation" id="explanationBox" style="display: none;">
-                    <strong>해설:</strong> 형식에 의한 검사는 자체검사 방법이 아닙니다...
-                </div>
+                <div class="feedback-title">정답입니다!</div>
             </div>
         </div>
         
@@ -484,7 +421,6 @@
     <div class="floating-menu">
         <button class="floating-btn btn-dashboard" onclick="goToDashboard()" title="대시보드">📊</button>
         <button class="floating-btn btn-home" onclick="goHome()" title="홈으로">🏠</button>
-        <button class="floating-btn" onclick="goBack()" title="이전 단계" style="background: #f39c12; color: white;">←</button>
     </div>
 
     <script>
@@ -499,47 +435,109 @@
         let totalQuestions = 0;
         let startTime = Date.now();
         let timerInterval;
+        let timeLimit = null;
+        let timeWarningShown = false;
 
-        // 설정 로드
         const config = JSON.parse(localStorage.getItem('quizConfig') || '{}');
         const mode = localStorage.getItem('quizMode') || 'full';
 
         document.addEventListener('DOMContentLoaded', function() {
+            loadBookmarks();
             loadQuestions();
             startTimer();
             setupKeyboardNavigation();
         });
 
+        function loadBookmarks() {
+            const saved = localStorage.getItem('bookmarkedQuestions');
+            if (saved) {
+                bookmarkedQuestions = new Set(JSON.parse(saved));
+            }
+        }
+
+        function saveBookmarks() {
+            localStorage.setItem('bookmarkedQuestions', JSON.stringify(Array.from(bookmarkedQuestions)));
+        }
+
+        function toggleBookmark() {
+            const question = currentQuestions[currentQuestionIndex];
+            const questionId = `${config.session}_${question.id || currentQuestionIndex}_${question.question.substring(0, 30)}`;
+            
+            if (bookmarkedQuestions.has(questionId)) {
+                bookmarkedQuestions.delete(questionId);
+                document.querySelector('.btn-bookmark').textContent = '⭐ 북마크';
+                document.querySelector('.btn-bookmark').style.background = '#f39c12';
+            } else {
+                const bookmarkData = {
+                    questionId: questionId,
+                    examId: config.session,
+                    questionIndex: currentQuestionIndex,
+                    question: question,
+                    addedDate: new Date().toISOString()
+                };
+                bookmarkedQuestions.add(questionId);
+                
+                const bookmarkDetails = JSON.parse(localStorage.getItem('bookmarkDetails') || '{}');
+                bookmarkDetails[questionId] = bookmarkData;
+                localStorage.setItem('bookmarkDetails', JSON.stringify(bookmarkDetails));
+                
+                document.querySelector('.btn-bookmark').textContent = '⭐ 북마크됨';
+                document.querySelector('.btn-bookmark').style.background = '#e67e22';
+            }
+            saveBookmarks();
+        }
+
         async function loadQuestions() {
             try {
-                const response = await fetch(`/api/exams/${config.session}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-                
-                currentQuestions = data.questions;
-                totalQuestions = currentQuestions.length;
-                
-                // 모드별 문제 필터링
-                if (mode === 'random') {
-                    currentQuestions = shuffleArray(currentQuestions).slice(0, 20);
-                    totalQuestions = 20;
-                } else if (mode === 'wrong') {
-                    const wrongAnswers = JSON.parse(localStorage.getItem('wrongAnswers') || '[]');
-                    currentQuestions = wrongAnswers;
-                    totalQuestions = wrongAnswers.length;
+                if (mode === 'wrong' || mode === 'bookmark' || mode === 'subject') {
+                    const savedQuestions = JSON.parse(localStorage.getItem('quizData') || '[]');
+                    currentQuestions = savedQuestions;
+                    totalQuestions = currentQuestions.length;
+                    
+                    if (totalQuestions === 0) {
+                        alert('문제가 없습니다.');
+                        window.location.href = 'quiz.html';
+                        return;
+                    }
+                } else {
+                    const response = await fetch(`/api/exams/${config.session}`);
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    
+                    currentQuestions = data.questions;
+                    totalQuestions = currentQuestions.length;
+                    
+                    if (mode === 'random') {
+                        const randomCount = Math.min(20, totalQuestions);
+                        currentQuestions = shuffleArray(currentQuestions).slice(0, randomCount);
+                        totalQuestions = currentQuestions.length;
+                    }
                 }
                 
                 document.getElementById('totalNum').textContent = totalQuestions;
+                document.getElementById('examInfo').textContent = getModeTitle();
                 displayQuestion();
                 
             } catch (error) {
                 console.error('Error loading questions:', error);
                 alert('문제를 불러오는 중 오류가 발생했습니다.');
             }
+        }
+
+        function getModeTitle() {
+            const modeNames = {
+                'full': '전체 문제',
+                'wrong': '오답노트 복습',
+                'bookmark': '북마크 복습',
+                'random': '랜덤 20문제',
+                'timer': '타이머 모드',
+                'subject': localStorage.getItem('selectedSubject') || '과목별 학습'
+            };
+            return modeNames[mode] || '문제 풀이';
         }
 
         function displayQuestion() {
@@ -552,26 +550,27 @@
             isAnswered = false;
             selectedAnswer = null;
 
-            // UI 업데이트
             document.getElementById('questionNumber').textContent = `문제 ${currentQuestionIndex + 1}`;
             document.getElementById('questionText').textContent = question.question || '문제 내용이 없습니다.';
             document.getElementById('currentNum').textContent = currentQuestionIndex + 1;
             document.getElementById('questionCounter').textContent = `${currentQuestionIndex + 1} / ${totalQuestions}`;
             
-            // 진행률 업데이트
             const progress = Math.round((currentQuestionIndex / totalQuestions) * 100);
             document.querySelector('.circle-bg').style.setProperty('--progress', `${progress}%`);
             document.querySelector('.circle-bg').textContent = `${progress}%`;
             
-            // 건너뛰기 표시
             const skipIndicator = document.getElementById('skipIndicator');
-            if (skippedQuestions.has(currentQuestionIndex)) {
-                skipIndicator.style.display = 'inline';
+            skipIndicator.style.display = skippedQuestions.has(currentQuestionIndex) ? 'inline' : 'none';
+
+            const questionId = `${config.session}_${question.id || currentQuestionIndex}_${question.question.substring(0, 30)}`;
+            if (bookmarkedQuestions.has(questionId)) {
+                document.querySelector('.btn-bookmark').textContent = '⭐ 북마크됨';
+                document.querySelector('.btn-bookmark').style.background = '#e67e22';
             } else {
-                skipIndicator.style.display = 'none';
+                document.querySelector('.btn-bookmark').textContent = '⭐ 북마크';
+                document.querySelector('.btn-bookmark').style.background = '#f39c12';
             }
 
-            // 선택지 업데이트
             const container = document.getElementById('optionsContainer');
             container.innerHTML = '';
             
@@ -589,10 +588,8 @@
                 container.appendChild(div);
             });
 
-            // 피드백 숨기기
             document.getElementById('feedback').style.display = 'none';
             
-            // 정답률 업데이트
             const accuracy = answeredQuestions > 0 ? Math.round((correctAnswers / answeredQuestions) * 100) : 0;
             document.getElementById('accuracyRate').textContent = `${accuracy}%`;
         }
@@ -607,12 +604,10 @@
             isAnswered = true;
             answeredQuestions++;
 
-            // 모든 옵션 비활성화
             document.querySelectorAll('.option').forEach(opt => {
                 opt.style.pointerEvents = 'none';
             });
 
-            // 정답 확인
             const isCorrect = checkAnswer(letter, number, correctAnswer);
             
             if (isCorrect) {
@@ -623,16 +618,19 @@
                 element.classList.add('incorrect');
                 showFeedback(false, `❌ 틀렸습니다. 정답은 ${correctAnswer}번입니다.`);
                 
-                // 정답 표시
                 const correctIndex = getCorrectOptionIndex(correctAnswer);
                 const options = document.querySelectorAll('.option');
                 if (options[correctIndex]) {
                     options[correctIndex].classList.add('correct');
                 }
+                
+                saveWrongAnswer(question);
             }
 
-            // 건너뛰기 목록에서 제거
             skippedQuestions.delete(currentQuestionIndex);
+            
+            const accuracy = answeredQuestions > 0 ? Math.round((correctAnswers / answeredQuestions) * 100) : 0;
+            document.getElementById('accuracyRate').textContent = `${accuracy}%`;
         }
 
         function checkAnswer(letter, number, correctAnswer) {
@@ -656,22 +654,29 @@
             feedback.style.display = 'block';
         }
 
-        function skipQuestion() {
-            if (isAnswered) return;
+        function saveWrongAnswer(question) {
+            const wrongAnswers = JSON.parse(localStorage.getItem('wrongAnswers') || '[]');
+            const questionId = `${config.session}_${currentQuestionIndex}_${question.question.substring(0, 50)}`;
             
-            skippedQuestions.add(currentQuestionIndex);
-            nextQuestion();
+            const exists = wrongAnswers.some(wrong => wrong.questionId === questionId);
+            
+            if (!exists) {
+                const wrongQuestion = {
+                    ...question,
+                    questionId: questionId,
+                    examId: config.session,
+                    questionIndex: currentQuestionIndex,
+                    addedDate: new Date().toISOString()
+                };
+                wrongAnswers.push(wrongQuestion);
+                localStorage.setItem('wrongAnswers', JSON.stringify(wrongAnswers));
+            }
         }
 
-        function toggleBookmark() {
-            if (bookmarkedQuestions.has(currentQuestionIndex)) {
-                bookmarkedQuestions.delete(currentQuestionIndex);
-            } else {
-                bookmarkedQuestions.add(currentQuestionIndex);
-            }
-            
-            const btn = document.querySelector('.btn-bookmark');
-            btn.textContent = bookmarkedQuestions.has(currentQuestionIndex) ? '⭐ 북마크됨' : '⭐ 북마크';
+        function skipQuestion() {
+            if (isAnswered) return;
+            skippedQuestions.add(currentQuestionIndex);
+            nextQuestion();
         }
 
         function nextQuestion() {
@@ -689,12 +694,46 @@
         }
 
         function startTimer() {
+            if (mode === 'timer') {
+                timeLimit = totalQuestions * 90 * 1000;
+                document.getElementById('timer').style.color = '#2ecc71';
+            }
+            
             timerInterval = setInterval(() => {
                 const elapsed = Date.now() - startTime;
-                const minutes = Math.floor(elapsed / 60000);
-                const seconds = Math.floor((elapsed % 60000) / 1000);
-                document.getElementById('timer').textContent = 
-                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (mode === 'timer' && timeLimit) {
+                    const remaining = timeLimit - elapsed;
+                    
+                    if (remaining <= 0) {
+                        clearInterval(timerInterval);
+                        alert('시간이 초과되었습니다! 시험이 종료됩니다.');
+                        showCompletionScreen();
+                        return;
+                    }
+                    
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    document.getElementById('timer').textContent = 
+                        `남은 시간: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    if (remaining <= 300000 && !timeWarningShown) {
+                        timeWarningShown = true;
+                        document.getElementById('timer').style.color = '#e74c3c';
+                        alert('남은 시간이 5분입니다!');
+                    }
+                    
+                    if (remaining <= 60000) {
+                        document.getElementById('timer').style.color = '#c0392b';
+                        document.getElementById('timer').style.fontWeight = 'bold';
+                        document.getElementById('timer').style.animation = 'pulse 1s infinite';
+                    }
+                } else {
+                    const minutes = Math.floor(elapsed / 60000);
+                    const seconds = Math.floor((elapsed % 60000) / 1000);
+                    document.getElementById('timer').textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
             }, 1000);
         }
 
@@ -708,7 +747,7 @@
                     if (options[index]) {
                         options[index].click();
                     }
-                } else if (e.key === ' ') { // 스페이스바로 건너뛰기
+                } else if (e.key === ' ') {
                     e.preventDefault();
                     skipQuestion();
                 }
@@ -726,6 +765,7 @@
 
         function showCompletionScreen() {
             clearInterval(timerInterval);
+            saveStudyRecord();
             
             const elapsed = Date.now() - startTime;
             const minutes = Math.floor(elapsed / 60000);
@@ -776,6 +816,42 @@
             `;
         }
 
+        function saveStudyRecord() {
+            const studyHistory = JSON.parse(localStorage.getItem('studyHistory') || '[]');
+            
+            const subjectStats = {};
+            currentQuestions.forEach((q, idx) => {
+                if (idx < answeredQuestions) {
+                    const subject = q.subject || '기타';
+                    if (!subjectStats[subject]) {
+                        subjectStats[subject] = { answered: 0, correct: 0 };
+                    }
+                    subjectStats[subject].answered++;
+                }
+            });
+            
+            const record = {
+                date: new Date().toISOString().split('T')[0],
+                examId: config.session,
+                mode: mode,
+                answered: answeredQuestions,
+                correct: correctAnswers,
+                totalQuestions: totalQuestions,
+                accuracy: answeredQuestions > 0 ? Math.round((correctAnswers / answeredQuestions) * 100) : 0,
+                timeSpent: Date.now() - startTime,
+                subjects: subjectStats,
+                timestamp: new Date().toISOString()
+            };
+            
+            studyHistory.push(record);
+            
+            if (studyHistory.length > 100) {
+                studyHistory.splice(0, studyHistory.length - 100);
+            }
+            
+            localStorage.setItem('studyHistory', JSON.stringify(studyHistory));
+        }
+
         function reviewSkipped() {
             if (skippedQuestions.size === 0) {
                 alert('건너뛴 문제가 없습니다.');
@@ -792,7 +868,6 @@
             answeredQuestions = 0;
             correctAnswers = 0;
             skippedQuestions.clear();
-            bookmarkedQuestions.clear();
             startTime = Date.now();
             startTimer();
             displayQuestion();
@@ -809,14 +884,7 @@
                 window.location.href = 'index.html';
             }
         }
-        
-        function goBack() {
-            if (confirm('문제 풀이를 중단하고 이전 단계로 돌아가시겠습니까?')) {
-                window.location.href = 'quiz.html';
-            }
-        }
 
-        // 진행률 저장 (페이지를 벗어날 때)
         window.addEventListener('beforeunload', () => {
             const progress = {
                 currentIndex: currentQuestionIndex,
