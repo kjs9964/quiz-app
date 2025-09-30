@@ -210,10 +210,11 @@
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             font-size: 1.1rem;
             position: relative;
             overflow: hidden;
+            background: white;
         }
         
         .option::before {
@@ -227,11 +228,11 @@
             transition: left 0.5s;
         }
         
-        .option:hover::before {
+        .option:not(.correct):not(.incorrect):hover::before {
             left: 100%;
         }
         
-        .option:hover {
+        .option:not(.correct):not(.incorrect):hover {
             border-color: #3498db;
             background: #f8f9fa;
             transform: translateX(5px);
@@ -258,14 +259,14 @@
         }
         
         .option.correct {
-            border-color: #27ae60;
-            background: #d5f4e6;
+            border-color: #27ae60 !important;
+            background: #d5f4e6 !important;
             animation: correctPulse 0.6s ease;
         }
         
         .option.incorrect {
-            border-color: #e74c3c;
-            background: #fadbd8;
+            border-color: #e74c3c !important;
+            background: #fadbd8 !important;
             animation: incorrectShake 0.6s ease;
         }
         
@@ -653,11 +654,15 @@
         function checkSavedProgress() {
             const savedProgress = localStorage.getItem('quizProgress');
             if (savedProgress) {
-                const progress = JSON.parse(savedProgress);
-                // 같은 세션인지 확인
-                if (progress.sessionId === config.session && progress.mode === mode) {
-                    document.getElementById('resumeModal').classList.add('active');
-                    return;
+                try {
+                    const progress = JSON.parse(savedProgress);
+                    // 같은 세션인지 확인
+                    if (progress.sessionId === config.session && progress.mode === mode) {
+                        document.getElementById('resumeModal').classList.add('active');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('진행 상황 로드 오류:', e);
                 }
             }
             // 저장된 진행 상황이 없거나 다른 세션이면 새로 시작
@@ -665,16 +670,21 @@
         }
 
         function resumeProgress() {
-            const savedProgress = JSON.parse(localStorage.getItem('quizProgress'));
-            
-            currentQuestionIndex = savedProgress.currentIndex || 0;
-            questionAnswerState = savedProgress.questionAnswerState || {};
-            skippedQuestions = new Set(savedProgress.skippedQuestions || []);
-            startTime = savedProgress.startTime || Date.now();
-            
-            document.getElementById('resumeModal').classList.remove('active');
-            
-            loadQuestions(true); // 진행 상황 복구 모드
+            try {
+                const savedProgress = JSON.parse(localStorage.getItem('quizProgress'));
+                
+                currentQuestionIndex = savedProgress.currentIndex || 0;
+                questionAnswerState = savedProgress.questionAnswerState || {};
+                skippedQuestions = new Set(savedProgress.skippedQuestions || []);
+                startTime = savedProgress.startTime || Date.now();
+                
+                document.getElementById('resumeModal').classList.remove('active');
+                
+                loadQuestions(true); // 진행 상황 복구 모드
+            } catch (e) {
+                console.error('진행 상황 복구 오류:', e);
+                startFresh();
+            }
         }
 
         function startFresh() {
@@ -686,7 +696,12 @@
         function loadBookmarks() {
             const saved = localStorage.getItem('bookmarkedQuestions');
             if (saved) {
-                bookmarkedQuestions = new Set(JSON.parse(saved));
+                try {
+                    bookmarkedQuestions = new Set(JSON.parse(saved));
+                } catch (e) {
+                    console.error('북마크 로드 오류:', e);
+                    bookmarkedQuestions = new Set();
+                }
             }
         }
 
@@ -696,7 +711,7 @@
 
         function toggleBookmark() {
             const question = currentQuestions[currentQuestionIndex];
-            const questionId = `${config.session}_${question.id || currentQuestionIndex}_${question.question.substring(0, 30)}`;
+            const questionId = generateQuestionId(question, currentQuestionIndex);
             
             if (bookmarkedQuestions.has(questionId)) {
                 bookmarkedQuestions.delete(questionId);
@@ -710,7 +725,7 @@
             } else {
                 const bookmarkData = {
                     questionId: questionId,
-                    examId: config.session,
+                    examId: config.session || 'unknown',
                     questionIndex: currentQuestionIndex,
                     question: question,
                     addedDate: new Date().toISOString()
@@ -727,18 +742,30 @@
             saveBookmarks();
         }
 
+        function generateQuestionId(question, index) {
+            // 안전한 ID 생성
+            const session = config.session || 'unknown';
+            const subject = question.subject || 'general';
+            const qid = question.id || question.Number || index;
+            const qtext = (question.question || question.Question || '').substring(0, 30).replace(/[^a-zA-Z0-9가-힣]/g, '');
+            return `${session}_${subject}_${qid}_${qtext}`;
+        }
+
         async function loadQuestions(isResume = false) {
             try {
                 if (mode === 'wrong' || mode === 'bookmark' || mode === 'subject') {
                     const savedQuestions = JSON.parse(localStorage.getItem('quizData') || '[]');
-                    currentQuestions = savedQuestions;
-                    totalQuestions = currentQuestions.length;
                     
-                    if (totalQuestions === 0) {
-                        alert('문제가 없습니다.');
+                    if (!Array.isArray(savedQuestions) || savedQuestions.length === 0) {
+                        alert('문제가 없습니다. 대시보드로 돌아갑니다.');
                         window.location.href = 'quiz.html';
                         return;
                     }
+                    
+                    // 문제 데이터 정규화
+                    currentQuestions = savedQuestions.map(q => normalizeQuestion(q));
+                    totalQuestions = currentQuestions.length;
+                    
                 } else {
                     const response = await fetch(`/api/exams/${config.session}`);
                     const data = await response.json();
@@ -748,7 +775,8 @@
                         return;
                     }
                     
-                    currentQuestions = data.questions;
+                    // 문제 데이터 정규화
+                    currentQuestions = data.questions.map(q => normalizeQuestion(q));
                     totalQuestions = currentQuestions.length;
                     
                     if (mode === 'random') {
@@ -761,7 +789,12 @@
                         } else {
                             const savedRandom = localStorage.getItem('randomQuestions');
                             if (savedRandom) {
-                                currentQuestions = JSON.parse(savedRandom);
+                                try {
+                                    currentQuestions = JSON.parse(savedRandom).map(q => normalizeQuestion(q));
+                                } catch (e) {
+                                    console.error('랜덤 문제 로드 오류:', e);
+                                    currentQuestions = shuffleArray(currentQuestions).slice(0, randomCount);
+                                }
                             } else {
                                 currentQuestions = shuffleArray(currentQuestions).slice(0, randomCount);
                             }
@@ -770,8 +803,11 @@
                     }
                 }
                 
+                console.log(`${totalQuestions}개 문제 로드 완료`);
+                
                 // 문제별 답변 상태 초기화 (복구가 아닌 경우에만)
                 if (!isResume) {
+                    questionAnswerState = {};
                     currentQuestions.forEach((_, index) => {
                         questionAnswerState[index] = { answered: false, correct: false };
                     });
@@ -784,16 +820,35 @@
                 if (!isResume) {
                     startTimer();
                 } else {
-                    // 복구 시 경과 시간 반영
                     startTimer();
                 }
                 
                 setupKeyboardNavigation();
                 
             } catch (error) {
-                console.error('Error loading questions:', error);
-                alert('문제를 불러오는 중 오류가 발생했습니다.');
+                console.error('문제 로드 오류:', error);
+                alert('문제를 불러오는 중 오류가 발생했습니다.\n\n' + error.message);
+                window.location.href = 'quiz.html';
             }
+        }
+
+        function normalizeQuestion(q) {
+            // 다양한 CSV 형식을 통일된 형식으로 변환
+            return {
+                id: q.id || q.Number || q.number || '',
+                question: q.question || q.Question || '',
+                questionImage: q.questionImage || q.Question_image || '',
+                a: q.a || q['Option 1'] || q.option1 || '',
+                b: q.b || q['Option 2'] || q.option2 || '',
+                c: q.c || q['Option 3'] || q.option3 || '',
+                d: q.d || q['Option 4'] || q.option4 || '',
+                answer: String(q.answer || q.Answer || '').trim().toUpperCase(),
+                explanation: q.explanation || q.Explanation || '',
+                testName: q.testName || q['Test Name'] || '',
+                year: q.year || q.Year || '',
+                session: q.session || q.Session || '',
+                subject: q.subject || q.Subject || ''
+            };
         }
 
         function getModeTitle() {
@@ -832,8 +887,7 @@
             // 문제 이미지 표시
             if (question.questionImage && question.questionImage.trim() !== '') {
                 const imgElement = document.createElement('img');
-                imgElement.src = question.questionImage;
-                imgElement.className = 'question-image';
+                imgElement.src = question.questionImage;imgElement.className = 'question-image';
                 imgElement.alt = '문제 이미지';
                 imgElement.onerror = function() {
                     this.style.display = 'none';
@@ -857,7 +911,7 @@
             const skipIndicator = document.getElementById('skipIndicator');
             skipIndicator.style.display = skippedQuestions.has(currentQuestionIndex) ? 'inline' : 'none';
 
-            const questionId = `${config.session}_${question.id || currentQuestionIndex}_${question.question.substring(0, 30)}`;
+            const questionId = generateQuestionId(question, currentQuestionIndex);
             if (bookmarkedQuestions.has(questionId)) {
                 document.querySelector('.btn-bookmark').textContent = '⭐ 북마크됨';
                 document.querySelector('.btn-bookmark').style.background = '#e67e22';
@@ -875,10 +929,19 @@
             options.forEach((option, index) => {
                 const div = document.createElement('div');
                 div.className = 'option';
-                div.onclick = () => selectAnswer(div, labels[index], index + 1);
+                div.setAttribute('data-option', labels[index]);
+                div.setAttribute('data-number', index + 1);
+                
+                // 클로저 문제 방지를 위해 즉시 실행 함수 사용
+                div.onclick = (function(optLabel, optNumber) {
+                    return function() {
+                        selectAnswer(this, optLabel, optNumber);
+                    };
+                })(labels[index], index + 1);
+                
                 div.innerHTML = `
                     <div class="option-label">${labels[index]}</div>
-                    <div>${question[option] || `선택지 ${labels[index]}`}</div>
+                    <div style="flex: 1;">${question[option] || `선택지 ${labels[index]}`}</div>
                 `;
                 container.appendChild(div);
             });
@@ -896,15 +959,24 @@
             const question = currentQuestions[currentQuestionIndex];
             const correctAnswer = question.answer;
             
-            // 이미 답변한 문제인지 확인const wasAnswered = questionAnswerState[currentQuestionIndex].answered;
+            console.log('선택한 답:', letter, number);
+            console.log('정답:', correctAnswer);
+            
+            // 이미 답변한 문제인지 확인
+            const wasAnswered = questionAnswerState[currentQuestionIndex].answered;
             
             selectedAnswer = number;
 
-            document.querySelectorAll('.option').forEach(opt => {
+            // 모든 선택지 비활성화
+            const allOptions = document.querySelectorAll('.option');
+            allOptions.forEach(opt => {
                 opt.style.pointerEvents = 'none';
+                opt.style.cursor = 'default';
             });
 
             const isCorrect = checkAnswer(letter, number, correctAnswer);
+            
+            console.log('정답 여부:', isCorrect);
             
             // 처음 답변하는 경우에만 상태 업데이트
             if (!wasAnswered) {
@@ -919,10 +991,12 @@
                 element.classList.add('incorrect');
                 showFeedback(false, `❌ 틀렸습니다. 정답은 ${correctAnswer}번입니다.`);
                 
+                // 정답 표시
                 const correctIndex = getCorrectOptionIndex(correctAnswer);
-                const options = document.querySelectorAll('.option');
-                if (options[correctIndex]) {
-                    options[correctIndex].classList.add('correct');
+                console.log('정답 인덱스:', correctIndex);
+                
+                if (correctIndex >= 0 && correctIndex < allOptions.length) {
+                    allOptions[correctIndex].classList.add('correct');
                 }
                 
                 // 처음 틀린 경우에만 오답노트에 저장
@@ -955,17 +1029,47 @@
         }
 
         function checkAnswer(letter, number, correctAnswer) {
-            return number.toString() === correctAnswer.toString() || 
-                   letter === correctAnswer.toString() ||
-                   (letter === 'A' && correctAnswer.toString() === '1') ||
-                   (letter === 'B' && correctAnswer.toString() === '2') ||
-                   (letter === 'C' && correctAnswer.toString() === '3') ||
-                   (letter === 'D' && correctAnswer.toString() === '4');
+            // 정답 형식 정규화
+            const normalizedCorrect = String(correctAnswer).trim().toUpperCase();
+            const normalizedLetter = String(letter).trim().toUpperCase();
+            const normalizedNumber = String(number).trim();
+            
+            // 직접 비교
+            if (normalizedNumber === normalizedCorrect) return true;
+            if (normalizedLetter === normalizedCorrect) return true;
+            
+            // 문자-숫자 매핑
+            const letterToNumber = { 'A': '1', 'B': '2', 'C': '3', 'D': '4' };
+            const numberToLetter = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
+            
+            if (letterToNumber[normalizedLetter] === normalizedCorrect) return true;
+            if (normalizedLetter === numberToLetter[normalizedCorrect]) return true;
+            
+            return false;
         }
 
         function getCorrectOptionIndex(correctAnswer) {
-            const answerMap = { 'A': 0, 'B': 1, 'C': 2, 'D': 3, '1': 0, '2': 1, '3': 2, '4': 3 };
-            return answerMap[correctAnswer.toString()] || parseInt(correctAnswer) - 1;
+            const normalized = String(correctAnswer).trim().toUpperCase();
+            
+            // A, B, C, D -> 0, 1, 2, 3
+            const letterMap = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+            if (letterMap.hasOwnProperty(normalized)) {
+                return letterMap[normalized];
+            }
+            
+            // 1, 2, 3, 4 -> 0, 1, 2, 3
+            const numberMap = { '1': 0, '2': 1, '3': 2, '4': 3 };
+            if (numberMap.hasOwnProperty(normalized)) {
+                return numberMap[normalized];
+            }
+            
+            // 숫자로 변환 시도
+            const num = parseInt(normalized);
+            if (!isNaN(num) && num >= 1 && num <= 4) {
+                return num - 1;
+            }
+            
+            return -1;
         }
 
         function showFeedback(isCorrect, message) {
@@ -976,25 +1080,28 @@
         }
 
         function saveWrongAnswer(question) {
-            const wrongAnswers = JSON.parse(localStorage.getItem('wrongAnswers') || '[]');
-            
-            // 고유 ID 생성: 시험ID + 과목 + 문제번호 + 문제 일부
-            const questionId = `${config.session || 'unknown'}_${question.subject || 'general'}_${question.id || currentQuestionIndex}_${question.question.substring(0, 30)}`;
-            
-            const exists = wrongAnswers.some(wrong => wrong.questionId === questionId);
-            
-            if (!exists) {
-                const wrongQuestion = {
-                    ...question,
-                    questionId: questionId,
-                    examId: config.session,
-                    questionIndex: currentQuestionIndex,
-                    subject: question.subject || '과목미지정',
-                    addedDate: new Date().toISOString()
-                };
-                wrongAnswers.push(wrongQuestion);
-                localStorage.setItem('wrongAnswers', JSON.stringify(wrongAnswers));
-                console.log('오답 저장:', questionId);
+            try {
+                const wrongAnswers = JSON.parse(localStorage.getItem('wrongAnswers') || '[]');
+                
+                const questionId = generateQuestionId(question, currentQuestionIndex);
+                
+                const exists = wrongAnswers.some(wrong => wrong.questionId === questionId);
+                
+                if (!exists) {
+                    const wrongQuestion = {
+                        ...question,
+                        questionId: questionId,
+                        examId: config.session || 'unknown',
+                        questionIndex: currentQuestionIndex,
+                        subject: question.subject || '과목미지정',
+                        addedDate: new Date().toISOString()
+                    };
+                    wrongAnswers.push(wrongQuestion);
+                    localStorage.setItem('wrongAnswers', JSON.stringify(wrongAnswers));
+                    console.log('오답 저장 완료:', questionId);
+                }
+            } catch (e) {
+                console.error('오답 저장 오류:', e);
             }
         }
 
@@ -1025,6 +1132,11 @@
             if (mode === 'timer') {
                 timeLimit = totalQuestions * 90 * 1000; // 문제당 90초
                 document.getElementById('timer').style.color = '#2ecc71';
+            }
+            
+            // 기존 타이머 정리
+            if (timerInterval) {
+                clearInterval(timerInterval);
             }
             
             timerInterval = setInterval(() => {
@@ -1065,15 +1177,19 @@
 
         function setupKeyboardNavigation() {
             document.addEventListener('keydown', (e) => {
+                // 모달이 열려있으면 무시
+                if (document.querySelector('.modal-overlay.active')) return;
+                
                 // 답변이 선택되어 있으면 키보드 입력 무시
                 const options = document.querySelectorAll('.option');
                 const isAnswered = Array.from(options).some(opt => 
                     opt.classList.contains('correct') || opt.classList.contains('incorrect')
                 );
                 
-                if (isAnswered) return;
+                if (isAnswered && (e.key >= '1' && e.key <= '4')) return;
                 
                 if (e.key >= '1' && e.key <= '4') {
+                    e.preventDefault();
                     const index = parseInt(e.key) - 1;
                     if (options[index]) {
                         options[index].click();
@@ -1101,22 +1217,26 @@
         }
 
         function saveCurrentProgress() {
-            const progress = {
-                sessionId: config.session,
-                mode: mode,
-                currentIndex: currentQuestionIndex,
-                questionAnswerState: questionAnswerState,
-                skippedQuestions: Array.from(skippedQuestions),
-                bookmarkedQuestions: Array.from(bookmarkedQuestions),
-                startTime: startTime,
-                savedAt: Date.now()
-            };
-            
-            if (mode === 'random') {
-                progress.randomQuestions = currentQuestions;
+            try {
+                const progress = {
+                    sessionId: config.session,
+                    mode: mode,
+                    currentIndex: currentQuestionIndex,
+                    questionAnswerState: questionAnswerState,
+                    skippedQuestions: Array.from(skippedQuestions),
+                    bookmarkedQuestions: Array.from(bookmarkedQuestions),
+                    startTime: startTime,
+                    savedAt: Date.now()
+                };
+                
+                if (mode === 'random') {
+                    progress.randomQuestions = currentQuestions;
+                }
+                
+                localStorage.setItem('quizProgress', JSON.stringify(progress));
+            } catch (e) {
+                console.error('진행 상황 저장 오류:', e);
             }
-            
-            localStorage.setItem('quizProgress', JSON.stringify(progress));
         }
 
         function saveAndExit() {
@@ -1232,59 +1352,63 @@
         }
 
         function saveStudyRecord() {
-            const studyHistory = JSON.parse(localStorage.getItem('studyHistory') || '[]');
-            
-            // 실제 답변한 문제 수와 정답 수 계산
-            let answeredCount = 0;
-            let correctCount = 0;
-            
-            for (let key in questionAnswerState) {
-                if (questionAnswerState[key].answered) {
-                    answeredCount++;
-                    if (questionAnswerState[key].correct) {
-                        correctCount++;
+            try {
+                const studyHistory = JSON.parse(localStorage.getItem('studyHistory') || '[]');
+                
+                // 실제 답변한 문제 수와 정답 수 계산
+                let answeredCount = 0;
+                let correctCount = 0;
+                
+                for (let key in questionAnswerState) {
+                    if (questionAnswerState[key].answered) {
+                        answeredCount++;
+                        if (questionAnswerState[key].correct) {
+                            correctCount++;
+                        }
                     }
                 }
-            }
-            
-            // 과목별 통계 계산
-            const subjectStats = {};
-            currentQuestions.forEach((q, idx) => {
-                if (questionAnswerState[idx] && questionAnswerState[idx].answered) {
-                    const subject = q.subject || '기타';
-                    if (!subjectStats[subject]) {
-                        subjectStats[subject] = { answered: 0, correct: 0 };
+                
+                // 과목별 통계 계산
+                const subjectStats = {};
+                currentQuestions.forEach((q, idx) => {
+                    if (questionAnswerState[idx] && questionAnswerState[idx].answered) {
+                        const subject = q.subject || '기타';
+                        if (!subjectStats[subject]) {
+                            subjectStats[subject] = { answered: 0, correct: 0 };
+                        }
+                        subjectStats[subject].answered++;
+                        if (questionAnswerState[idx].correct) {
+                            subjectStats[subject].correct++;
+                        }
                     }
-                    subjectStats[subject].answered++;
-                    if (questionAnswerState[idx].correct) {
-                        subjectStats[subject].correct++;
-                    }
+                });
+                
+                const record = {
+                    date: new Date().toISOString().split('T')[0],
+                    examId: config.session || 'unknown',
+                    mode: mode,
+                    answered: answeredCount,
+                    correct: correctCount,
+                    totalQuestions: totalQuestions,
+                    accuracy: answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0,
+                    timeSpent: Date.now() - startTime,
+                    subjects: subjectStats,
+                    timestamp: new Date().toISOString()
+                };
+                
+                studyHistory.push(record);
+                
+                // 최근 100개만 유지
+                if (studyHistory.length > 100) {
+                    studyHistory.splice(0, studyHistory.length - 100);
                 }
-            });
-            
-            const record = {
-                date: new Date().toISOString().split('T')[0],
-                examId: config.session,
-                mode: mode,
-                answered: answeredCount,
-                correct: correctCount,
-                totalQuestions: totalQuestions,
-                accuracy: answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0,
-                timeSpent: Date.now() - startTime,
-                subjects: subjectStats,
-                timestamp: new Date().toISOString()
-            };
-            
-            studyHistory.push(record);
-            
-            // 최근 100개만 유지
-            if (studyHistory.length > 100) {
-                studyHistory.splice(0, studyHistory.length - 100);
+                
+                localStorage.setItem('studyHistory', JSON.stringify(studyHistory));
+                
+                console.log('📊 학습 기록 저장 완료:', record);
+            } catch (e) {
+                console.error('학습 기록 저장 오류:', e);
             }
-            
-            localStorage.setItem('studyHistory', JSON.stringify(studyHistory));
-            
-            console.log('📊 학습 기록 저장 완료:', record);
         }
 
         function reviewSkipped() {
