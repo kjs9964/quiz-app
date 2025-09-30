@@ -444,7 +444,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadBookmarks();
             loadQuestions();
-            startTimer();
             setupKeyboardNavigation();
         });
 
@@ -520,6 +519,8 @@
                 
                 document.getElementById('totalNum').textContent = totalQuestions;
                 document.getElementById('examInfo').textContent = getModeTitle();
+                
+                startTimer();
                 displayQuestion();
                 
             } catch (error) {
@@ -869,6 +870,7 @@
             correctAnswers = 0;
             skippedQuestions.clear();
             startTime = Date.now();
+            clearInterval(timerInterval);
             startTimer();
             displayQuestion();
         }

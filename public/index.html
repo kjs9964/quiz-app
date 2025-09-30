@@ -187,6 +187,15 @@
             cursor: not-allowed;
         }
         
+        .btn-skip {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-skip:hover {
+            background: #e67e22;
+        }
+        
         .dday-section {
             background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
             color: white;
@@ -217,10 +226,17 @@
             padding: 10px 20px;
             border: none;
             border-radius: 8px;
-            background: #e74c3c;
             color: white;
             cursor: pointer;
             font-weight: bold;
+        }
+        
+        .dday-controls .btn-set {
+            background: #e74c3c;
+        }
+        
+        .dday-controls .btn-skip {
+            background: #f39c12;
         }
         
         .breadcrumb {
@@ -294,7 +310,8 @@
                 <p>목표하는 시험일을 설정하여 D-Day를 확인하세요</p>
                 <div class="dday-controls">
                     <input type="date" id="examDateInput">
-                    <button onclick="setExamDate()">설정</button>
+                    <button class="btn-set" onclick="setExamDate()">설정</button>
+                    <button class="btn-skip" onclick="skipDDay()">건너뛰기</button>
                 </div>
                 <div id="ddayDisplay" style="margin-top: 20px; font-size: 1.2rem;"></div>
             </div>
@@ -305,17 +322,17 @@
             <div class="breadcrumb">1단계: 안전 분야 선택</div>
             <h2>안전 분야를 선택해주세요</h2>
             <div class="category-grid">
-                <div class="category-card" onclick="selectCategory('disaster')">
-                    <div class="category-title">재난안전</div>
-                    <div class="category-desc">자연재해, 사회재난 관련</div>
+                <div class="category-card" onclick="selectCategory('industrial')">
+                    <div class="category-title">산업안전</div>
+                    <div class="category-desc">건설안전, 산업안전 관련</div>
                 </div>
                 <div class="category-card" onclick="selectCategory('fire')">
                     <div class="category-title">소방안전</div>
                     <div class="category-desc">화재예방, 소방시설 관련</div>
                 </div>
-                <div class="category-card" onclick="selectCategory('industrial')">
-                    <div class="category-title">산업안전</div>
-                    <div class="category-desc">건설안전, 산업안전 관련</div>
+                <div class="category-card" onclick="selectCategory('disaster')">
+                    <div class="category-title">재난안전</div>
+                    <div class="category-desc">자연재해, 사회재난 관련</div>
                 </div>
             </div>
         </div>
@@ -351,19 +368,17 @@
         let selectedSession = null;
         let examDate = null;
 
+        // 실제 데이터 기반 자격증 정보
         const examTypeData = {
             industrial: [
                 { id: 'construction-safety', name: '건설안전기사', desc: '건설현장 안전관리' },
-                { id: 'industrial-safety', name: '산업안전기사', desc: '산업현장 안전관리' },
-                { id: 'safety-management', name: '안전관리사', desc: '종합적 안전관리' }
+                { id: 'industrial-safety', name: '산업안전기사', desc: '산업현장 안전관리' }
             ],
             fire: [
-                { id: 'fire-safety', name: '소방안전기사', desc: '소방시설 설계·시공' },
-                { id: 'fire-facility', name: '소방시설관리사', desc: '소방시설 유지관리' }
+                { id: 'fire-safety', name: '소방안전기사', desc: '소방시설 설계·시공' }
             ],
             disaster: [
-                { id: 'disaster-prevention', name: '방재안전직 국가7급', desc: '재난관리 공무원' },
-                { id: 'emergency-management', name: '응급처치사', desc: '응급상황 대응' }
+                { id: 'disaster-prevention', name: '재난안전', desc: '재난관리 및 예방' }
             ]
         };
 
@@ -451,7 +466,7 @@
             
             // 현재 단계에 따라 nextBtn 활성화 상태 결정
             if (currentStep === 1) {
-                document.getElementById('nextBtn').disabled = !examDate;
+                document.getElementById('nextBtn').disabled = false; // D-Day는 건너뛰기 가능
             } else if (currentStep === 2) {
                 document.getElementById('nextBtn').disabled = !selectedCategory;
             } else if (currentStep === 3) {
@@ -507,9 +522,26 @@
             const input = document.getElementById('examDateInput');
             if (input.value) {
                 examDate = new Date(input.value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (examDate < today) {
+                    alert('오늘 이후의 날짜를 선택해주세요.');
+                    return;
+                }
+                
                 updateDDayDisplay();
                 document.getElementById('nextBtn').disabled = false;
+            } else {
+                alert('시험일을 선택해주세요.');
             }
+        }
+
+        function skipDDay() {
+            examDate = null;
+            document.getElementById('examDateInput').value = '';
+            document.getElementById('ddayDisplay').innerHTML = '<div style="color: white; font-weight: bold;">⏭️ D-Day 설정을 건너뛰었습니다</div>';
+            document.getElementById('nextBtn').disabled = false;
         }
 
         function updateDDayDisplay() {
@@ -517,7 +549,11 @@
             if (!examDate) return;
             
             const today = new Date();
-            const timeDiff = examDate.getTime() - today.getTime();
+            today.setHours(0, 0, 0, 0);
+            const examDateOnly = new Date(examDate);
+            examDateOnly.setHours(0, 0, 0, 0);
+            
+            const timeDiff = examDateOnly.getTime() - today.getTime();
             const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
             
             if (daysDiff > 0) {
@@ -535,7 +571,7 @@
                 category: selectedCategory,
                 examType: selectedExamType,
                 session: selectedSession,
-                examDate: examDate
+                examDate: examDate ? examDate.toISOString() : null
             };
             
             // 설정을 localStorage에 저장
@@ -546,12 +582,12 @@
             document.querySelector('.container').style.opacity = '0';
             
             setTimeout(() => {
-                window.location.href = 'quiz.html'; // 실제 문제풀이 페이지로
+                window.location.href = 'quiz.html';
             }, 500);
         }
 
         // 초기 설정
-        document.getElementById('nextBtn').disabled = true;
+        document.getElementById('nextBtn').disabled = false; // D-Day는 건너뛰기 가능
     </script>
 </body>
 </html>
