@@ -616,7 +616,6 @@
         <button class="floating-btn btn-home" onclick="goHome()" title="홈으로">🏠</button>
     </div>
 
-    <!-- 진행 상황 복구 모달 -->
     <div class="modal-overlay" id="resumeModal">
         <div class="modal-content">
             <h3>💾 저장된 진행 상황 발견</h3>
@@ -639,9 +638,7 @@
         let timerInterval;
         let timeLimit = null;
         let timeWarningShown = false;
-
-        // 각 문제별 답변 상태 추적 (중복 카운팅 방지)
-        let questionAnswerState = {}; // { questionIndex: { answered: boolean, correct: boolean } }
+        let questionAnswerState = {};
 
         const config = JSON.parse(localStorage.getItem('quizConfig') || '{}');
         const mode = localStorage.getItem('quizMode') || 'full';
@@ -656,7 +653,6 @@
             if (savedProgress) {
                 try {
                     const progress = JSON.parse(savedProgress);
-                    // 같은 세션인지 확인
                     if (progress.sessionId === config.session && progress.mode === mode) {
                         document.getElementById('resumeModal').classList.add('active');
                         return;
@@ -665,7 +661,6 @@
                     console.error('진행 상황 로드 오류:', e);
                 }
             }
-            // 저장된 진행 상황이 없거나 다른 세션이면 새로 시작
             startFresh();
         }
 
@@ -680,7 +675,7 @@
                 
                 document.getElementById('resumeModal').classList.remove('active');
                 
-                loadQuestions(true); // 진행 상황 복구 모드
+                loadQuestions(true);
             } catch (e) {
                 console.error('진행 상황 복구 오류:', e);
                 startFresh();
@@ -718,7 +713,6 @@
                 document.querySelector('.btn-bookmark').textContent = '⭐ 북마크';
                 document.querySelector('.btn-bookmark').style.background = '#f39c12';
                 
-                // bookmarkDetails에서도 제거
                 const bookmarkDetails = JSON.parse(localStorage.getItem('bookmarkDetails') || '{}');
                 delete bookmarkDetails[questionId];
                 localStorage.setItem('bookmarkDetails', JSON.stringify(bookmarkDetails));
@@ -743,7 +737,6 @@
         }
 
         function generateQuestionId(question, index) {
-            // 안전한 ID 생성
             const session = config.session || 'unknown';
             const subject = question.subject || 'general';
             const qid = question.id || question.Number || index;
@@ -762,7 +755,6 @@
                         return;
                     }
                     
-                    // 문제 데이터 정규화
                     currentQuestions = savedQuestions.map(q => normalizeQuestion(q));
                     totalQuestions = currentQuestions.length;
                     
@@ -775,16 +767,13 @@
                         return;
                     }
                     
-                    // 문제 데이터 정규화
                     currentQuestions = data.questions.map(q => normalizeQuestion(q));
                     totalQuestions = currentQuestions.length;
                     
                     if (mode === 'random') {
                         const randomCount = Math.min(20, totalQuestions);
-                        // 랜덤 모드는 복구 시에도 같은 문제 세트 사용
                         if (!isResume) {
                             currentQuestions = shuffleArray(currentQuestions).slice(0, randomCount);
-                            // 랜덤 문제 세트 저장
                             localStorage.setItem('randomQuestions', JSON.stringify(currentQuestions));
                         } else {
                             const savedRandom = localStorage.getItem('randomQuestions');
@@ -805,7 +794,6 @@
                 
                 console.log(`${totalQuestions}개 문제 로드 완료`);
                 
-                // 문제별 답변 상태 초기화 (복구가 아닌 경우에만)
                 if (!isResume) {
                     questionAnswerState = {};
                     currentQuestions.forEach((_, index) => {
@@ -817,12 +805,7 @@
                 document.getElementById('examInfo').textContent = getModeTitle();
                 displayQuestion();
                 
-                if (!isResume) {
-                    startTimer();
-                } else {
-                    startTimer();
-                }
-                
+                startTimer();
                 setupKeyboardNavigation();
                 
             } catch (error) {
@@ -833,7 +816,6 @@
         }
 
         function normalizeQuestion(q) {
-            // 다양한 CSV 형식을 통일된 형식으로 변환
             return {
                 id: q.id || q.Number || q.number || '',
                 question: q.question || q.Question || '',
@@ -873,21 +855,19 @@
 
             document.getElementById('questionNumber').textContent = `문제 ${currentQuestionIndex + 1}`;
             
-            // 문제 메타 정보 표시
             const metaInfo = [];
             if (question.subject) metaInfo.push(question.subject);
             if (question.year) metaInfo.push(`${question.year}년`);
             if (question.session) metaInfo.push(`${question.session}회`);
             document.getElementById('questionMeta').textContent = metaInfo.length > 0 ? `(${metaInfo.join(' ')})` : '';
             
-            // 문제 텍스트 표시 (LaTeX 포함)
             const questionTextDiv = document.getElementById('questionText');
             questionTextDiv.innerHTML = question.question || '문제 내용이 없습니다.';
             
-            // 문제 이미지 표시
             if (question.questionImage && question.questionImage.trim() !== '') {
                 const imgElement = document.createElement('img');
-                imgElement.src = question.questionImage;imgElement.className = 'question-image';
+                imgElement.src = question.questionImage;
+                imgElement.className = 'question-image';
                 imgElement.alt = '문제 이미지';
                 imgElement.onerror = function() {
                     this.style.display = 'none';
@@ -896,10 +876,8 @@
                 questionTextDiv.appendChild(imgElement);
             }
             
-            // MathJax 렌더링
-            if (window.MathJax) {
-                MathJax.typesetPromise([questionTextDiv]).catch((err) => console.log('MathJax error:', err));
-            }
+            // MathJax 렌더링 (안전하게)
+            renderMathJax(questionTextDiv);
             
             document.getElementById('currentNum').textContent = currentQuestionIndex + 1;
             document.getElementById('questionCounter').textContent = `${currentQuestionIndex + 1} / ${totalQuestions}`;
@@ -932,7 +910,6 @@
                 div.setAttribute('data-option', labels[index]);
                 div.setAttribute('data-number', index + 1);
                 
-                // 클로저 문제 방지를 위해 즉시 실행 함수 사용
                 div.onclick = (function(optLabel, optNumber) {
                     return function() {
                         selectAnswer(this, optLabel, optNumber);
@@ -947,12 +924,22 @@
             });
 
             document.getElementById('feedback').style.display = 'none';
-            
-            // 이전 버튼 상태
             document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
-            
-            // 정답률 업데이트
             updateAccuracyRate();
+        }
+
+        // MathJax 안전 렌더링 함수
+        function renderMathJax(element) {
+            if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                MathJax.typesetPromise([element]).catch((err) => {
+                    console.log('MathJax 렌더링 오류:', err);
+                });
+            } else if (typeof MathJax !== 'undefined' && MathJax.Hub) {
+                MathJax.Hub.Queue(['Typeset', MathJax.Hub, element]);
+            } else {
+                console.log('MathJax가 아직 로드되지 않았습니다.');
+                setTimeout(() => renderMathJax(element), 100);
+            }
         }
 
         function selectAnswer(element, letter, number) {
@@ -962,12 +949,9 @@
             console.log('선택한 답:', letter, number);
             console.log('정답:', correctAnswer);
             
-            // 이미 답변한 문제인지 확인
             const wasAnswered = questionAnswerState[currentQuestionIndex].answered;
-            
             selectedAnswer = number;
 
-            // 모든 선택지 비활성화
             const allOptions = document.querySelectorAll('.option');
             allOptions.forEach(opt => {
                 opt.style.pointerEvents = 'none';
@@ -975,10 +959,8 @@
             });
 
             const isCorrect = checkAnswer(letter, number, correctAnswer);
-            
             console.log('정답 여부:', isCorrect);
             
-            // 처음 답변하는 경우에만 상태 업데이트
             if (!wasAnswered) {
                 questionAnswerState[currentQuestionIndex].answered = true;
                 questionAnswerState[currentQuestionIndex].correct = isCorrect;
@@ -991,7 +973,6 @@
                 element.classList.add('incorrect');
                 showFeedback(false, `❌ 틀렸습니다. 정답은 ${correctAnswer}번입니다.`);
                 
-                // 정답 표시
                 const correctIndex = getCorrectOptionIndex(correctAnswer);
                 console.log('정답 인덱스:', correctIndex);
                 
@@ -999,16 +980,14 @@
                     allOptions[correctIndex].classList.add('correct');
                 }
                 
-                // 처음 틀린 경우에만 오답노트에 저장
                 if (!wasAnswered) {
                     saveWrongAnswer(question);
                 }
             }
 
             skippedQuestions.delete(currentQuestionIndex);
-            
             updateAccuracyRate();
-            saveCurrentProgress(); // 자동 저장
+            saveCurrentProgress();
         }
 
         function updateAccuracyRate() {
@@ -1029,16 +1008,13 @@
         }
 
         function checkAnswer(letter, number, correctAnswer) {
-            // 정답 형식 정규화
             const normalizedCorrect = String(correctAnswer).trim().toUpperCase();
             const normalizedLetter = String(letter).trim().toUpperCase();
             const normalizedNumber = String(number).trim();
             
-            // 직접 비교
             if (normalizedNumber === normalizedCorrect) return true;
             if (normalizedLetter === normalizedCorrect) return true;
             
-            // 문자-숫자 매핑
             const letterToNumber = { 'A': '1', 'B': '2', 'C': '3', 'D': '4' };
             const numberToLetter = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
             
@@ -1051,19 +1027,16 @@
         function getCorrectOptionIndex(correctAnswer) {
             const normalized = String(correctAnswer).trim().toUpperCase();
             
-            // A, B, C, D -> 0, 1, 2, 3
             const letterMap = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
             if (letterMap.hasOwnProperty(normalized)) {
                 return letterMap[normalized];
             }
             
-            // 1, 2, 3, 4 -> 0, 1, 2, 3
             const numberMap = { '1': 0, '2': 1, '3': 2, '4': 3 };
             if (numberMap.hasOwnProperty(normalized)) {
                 return numberMap[normalized];
             }
             
-            // 숫자로 변환 시도
             const num = parseInt(normalized);
             if (!isNaN(num) && num >= 1 && num <= 4) {
                 return num - 1;
@@ -1082,9 +1055,7 @@
         function saveWrongAnswer(question) {
             try {
                 const wrongAnswers = JSON.parse(localStorage.getItem('wrongAnswers') || '[]');
-                
                 const questionId = generateQuestionId(question, currentQuestionIndex);
-                
                 const exists = wrongAnswers.some(wrong => wrong.questionId === questionId);
                 
                 if (!exists) {
@@ -1107,7 +1078,7 @@
 
         function skipQuestion() {
             skippedQuestions.add(currentQuestionIndex);
-            saveCurrentProgress(); // 자동 저장
+            saveCurrentProgress();
             nextQuestion();
         }
 
@@ -1116,7 +1087,6 @@
                 currentQuestionIndex++;
                 displayQuestion();
             } else {
-                // 마지막 문제인 경우 완료 화면으로
                 showCompletionScreen();
             }
         }
@@ -1130,11 +1100,10 @@
 
         function startTimer() {
             if (mode === 'timer') {
-                timeLimit = totalQuestions * 90 * 1000; // 문제당 90초
+                timeLimit = totalQuestions * 90 * 1000;
                 document.getElementById('timer').style.color = '#2ecc71';
             }
             
-            // 기존 타이머 정리
             if (timerInterval) {
                 clearInterval(timerInterval);
             }
@@ -1177,10 +1146,8 @@
 
         function setupKeyboardNavigation() {
             document.addEventListener('keydown', (e) => {
-                // 모달이 열려있으면 무시
                 if (document.querySelector('.modal-overlay.active')) return;
                 
-                // 답변이 선택되어 있으면 키보드 입력 무시
                 const options = document.querySelectorAll('.option');
                 const isAnswered = Array.from(options).some(opt => 
                     opt.classList.contains('correct') || opt.classList.contains('incorrect')
@@ -1247,11 +1214,8 @@
 
         function showCompletionScreen() {
             clearInterval(timerInterval);
-            
-            // 진행 상황 삭제
             localStorage.removeItem('quizProgress');
             localStorage.removeItem('randomQuestions');
-            
             saveStudyRecord();
             
             const elapsed = Date.now() - startTime;
@@ -1259,7 +1223,6 @@
             const seconds = Math.floor((elapsed % 60000) / 1000);
             const timeString = `${minutes}분 ${seconds}초`;
             
-            // 실제 답변한 문제 수와 정답 수 계산
             let answeredCount = 0;
             let correctCount = 0;
             
@@ -1347,7 +1310,6 @@
                 </div>
             `;
             
-            // 네비게이션 숨기기
             document.querySelector('.navigation').style.display = 'none';
         }
 
@@ -1355,7 +1317,6 @@
             try {
                 const studyHistory = JSON.parse(localStorage.getItem('studyHistory') || '[]');
                 
-                // 실제 답변한 문제 수와 정답 수 계산
                 let answeredCount = 0;
                 let correctCount = 0;
                 
@@ -1368,7 +1329,6 @@
                     }
                 }
                 
-                // 과목별 통계 계산
                 const subjectStats = {};
                 currentQuestions.forEach((q, idx) => {
                     if (questionAnswerState[idx] && questionAnswerState[idx].answered) {
@@ -1398,13 +1358,11 @@
                 
                 studyHistory.push(record);
                 
-                // 최근 100개만 유지
                 if (studyHistory.length > 100) {
                     studyHistory.splice(0, studyHistory.length - 100);
                 }
                 
                 localStorage.setItem('studyHistory', JSON.stringify(studyHistory));
-                
                 console.log('📊 학습 기록 저장 완료:', record);
             } catch (e) {
                 console.error('학습 기록 저장 오류:', e);
@@ -1418,16 +1376,46 @@
             }
             
             const skippedArray = Array.from(skippedQuestions).sort((a, b) => a - b);
+            
+            const navElement = document.querySelector('.navigation');
+            const questionCard = document.getElementById('questionCard');
+            
+            if (navElement) {
+                navElement.style.display = 'flex';
+            }
+            
+            if (questionCard && document.querySelector('.completion-screen')) {
+                questionCard.innerHTML = `
+                    <div class="question-header">
+                        <div>
+                            <span class="question-number" id="questionNumber">문제 1</span>
+                            <span class="question-meta" id="questionMeta"></span>
+                        </div>
+                        <div class="question-actions">
+                            <button class="action-btn btn-bookmark" onclick="toggleBookmark()">⭐ 북마크</button>
+                            <button class="action-btn btn-skip" onclick="skipQuestion()">⏭️ 건너뛰기</button>
+                            <button class="action-btn btn-save-exit" onclick="saveAndExit()">💾 저장 후 나가기</button>
+                        </div>
+                    </div>
+                    
+                    <div class="question-text" id="questionText">
+                        문제를 불러오는 중...
+                    </div>
+                    
+                    <div class="options" id="optionsContainer">
+                    </div>
+                    
+                    <div class="feedback" id="feedback">
+                        <div class="feedback-title">정답입니다!</div>
+                    </div>
+                `;
+            }
+            
             currentQuestionIndex = skippedArray[0];
-            
-            // 네비게이션 다시 표시
-            document.querySelector('.navigation').style.display = 'flex';
-            
             displayQuestion();
         }
 
         function reviewWrong() {
-            // 현재 세션에서 틀린 문제만 복습
             const wrongIndices = [];
             for (let key in questionAnswerState) {
                 if (questionAnswerState[key].answered && !questionAnswerState[key].correct) {
@@ -1440,11 +1428,41 @@
                 return;
             }
             
+            const navElement = document.querySelector('.navigation');
+            const questionCard = document.getElementById('questionCard');
+            
+            if (navElement) {
+                navElement.style.display = 'flex';
+            }
+            
+            if (questionCard && document.querySelector('.completion-screen')) {
+                questionCard.innerHTML = `
+                    <div class="question-header">
+                        <div>
+                            <span class="question-number" id="questionNumber">문제 1</span>
+                            <span class="question-meta" id="questionMeta"></span>
+                        </div>
+                        <div class="question-actions">
+                            <button class="action-btn btn-bookmark" onclick="toggleBookmark()">⭐ 북마크</button>
+                            <button class="action-btn btn-skip" onclick="skipQuestion()">⏭️ 건너뛰기</button>
+                            <button class="action-btn btn-save-exit" onclick="saveAndExit()">💾 저장 후 나가기</button>
+                        </div>
+                    </div>
+                    
+                    <div class="question-text" id="questionText">
+                        문제를 불러오는 중...
+                    </div>
+                    
+                    <div class="options" id="optionsContainer">
+                    </div>
+                    
+                    <div class="feedback" id="feedback">
+                        <div class="feedback-title">정답입니다!</div>
+                    </div>
+                `;
+            }
+            
             currentQuestionIndex = wrongIndices[0];
-            
-            // 네비게이션 다시 표시
-            document.querySelector('.navigation').style.display = 'flex';
-            
             displayQuestion();
         }
 
@@ -1452,35 +1470,58 @@
             if (confirm('처음부터 다시 시작하시겠습니까?\n\n' + 
                        (mode === 'random' ? '새로운 랜덤 문제가 선택됩니다.' : '모든 진행 상황이 초기화됩니다.'))) {
                 
-                // 상태 완전 초기화
                 currentQuestionIndex = 0;
                 skippedQuestions.clear();
                 startTime = Date.now();
                 timeWarningShown = false;
-                
-                // 답변 상태 초기화
                 questionAnswerState = {};
                 
-                // 랜덤 모드는 새로운 문제 세트 생성
                 if (mode === 'random') {
                     localStorage.removeItem('randomQuestions');
                 }
                 
-                // 진행 상황 삭제
                 localStorage.removeItem('quizProgress');
                 
-                // 네비게이션 다시 표시
-                document.querySelector('.navigation').style.display = 'flex';
+                const navElement = document.querySelector('.navigation');
+                const questionCard = document.getElementById('questionCard');
+                
+                if (navElement) {
+                    navElement.style.display = 'flex';
+                }
+                
+                if (questionCard) {
+                    questionCard.innerHTML = `
+                        <div class="question-header">
+                            <div>
+                                <span class="question-number" id="questionNumber">문제 1</span>
+                                <span class="question-meta" id="questionMeta"></span>
+                            </div>
+                            <div class="question-actions">
+                                <button class="action-btn btn-bookmark" onclick="toggleBookmark()">⭐ 북마크</button>
+                                <button class="action-btn btn-skip" onclick="skipQuestion()">⏭️ 건너뛰기</button>
+                                <button class="action-btn btn-save-exit" onclick="saveAndExit()">💾 저장 후 나가기</button>
+                            </div>
+                        </div>
+                        
+                        <div class="question-text" id="questionText">
+                            문제를 불러오는 중...
+                        </div>
+                        
+                        <div class="options" id="optionsContainer">
+                        </div>
+                        
+                        <div class="feedback" id="feedback">
+                            <div class="feedback-title">정답입니다!</div>
+                        </div>
+                    `;
+                }
                 
                 clearInterval(timerInterval);
-                
-                // 문제 다시 로드
                 loadQuestions(false);
             }
         }
 
         function goToDashboard() {
-            // 진행 중이면 저장할지 물어봄
             if (currentQuestionIndex < currentQuestions.length && !document.querySelector('.completion-screen')) {
                 if (confirm('💾 진행 상황을 저장하고 나가시겠습니까?\n\n"확인"을 누르면 저장 후 이동합니다.\n"취소"를 누르면 저장하지 않고 이동합니다.')) {
                     saveCurrentProgress();
@@ -1497,13 +1538,9 @@
             }
         }
 
-        // 페이지 이탈 시 자동 저장
         window.addEventListener('beforeunload', (e) => {
-            // 완료 화면이 아닐 때만 자동 저장 및 경고
             if (currentQuestionIndex < currentQuestions.length && !document.querySelector('.completion-screen')) {
                 saveCurrentProgress();
-                
-                // 브라우저 경고 표시
                 e.preventDefault();
                 e.returnValue = '진행 상황이 자동 저장됩니다. 페이지를 나가시겠습니까?';
             }
