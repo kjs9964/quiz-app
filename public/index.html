@@ -3,591 +3,703 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>시험 선택 - 건설안전기사 문제풀이</title>
+    <title>시험 학습 시스템</title>
+    <script src="exams-config.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Malgun Gothic', sans-serif;
-            margin: 0;
-            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #333;
+            padding: 20px;
         }
-        
+
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+        }
+
+        .main-nav {
             background: white;
             border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-        
-        .step {
-            display: none;
-            animation: slideIn 0.5s ease-out;
-        }
-        
-        .step.active {
-            display: block;
-        }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 40px;
-            font-size: 2.5rem;
-        }
-        
-        h2 {
-            color: #34495e;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
+            padding: 30px;
             margin-bottom: 30px;
-        }
-        
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
             gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .category-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-            border: 3px solid transparent;
-        }
-        
-        .category-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-        
-        .category-card.selected {
-            border-color: #f39c12;
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-        }
-        
-        .category-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .category-desc {
-            font-size: 1rem;
-            opacity: 0.9;
-        }
-        
-        .exam-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        
-        .exam-item {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            text-align: center;
-        }
-        
-        .exam-item:hover {
-            background: #e9ecef;
-            transform: translateY(-2px);
-        }
-        
-        .exam-item.selected {
-            border-color: #3498db;
-            background: #ebf3ff;
-        }
-        
-        .session-list {
-            display: flex;
             flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 30px;
+            justify-content: center;
+            animation: fadeInUp 0.6s ease 0.2s both;
         }
-        
-        .session-item {
-            background: #2ecc71;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            font-weight: bold;
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
-        .session-item:hover {
-            background: #27ae60;
-            transform: scale(1.05);
-        }
-        
-        .session-item.selected {
-            background: #e74c3c;
-            border-color: #c0392b;
-        }
-        
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 40px;
-        }
-        
+
         .nav-btn {
-            padding: 15px 30px;
+            flex: 1;
+            min-width: 200px;
+            padding: 25px;
             border: none;
-            border-radius: 25px;
+            border-radius: 15px;
             font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-        }
-        
-        .btn-back {
-            background: #95a5a6;
             color: white;
-        }
-        
-        .btn-back:hover {
-            background: #7f8c8d;
-        }
-        
-        .btn-next {
-            background: #3498db;
-            color: white;
-        }
-        
-        .btn-next:hover {
-            background: #2980b9;
-        }
-        
-        .btn-next:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-        }
-        
-        .btn-skip {
-            background: #f39c12;
-            color: white;
-        }
-        
-        .btn-skip:hover {
-            background: #e67e22;
-        }
-        
-        .dday-section {
-            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        
-        .dday-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-        
-        .dday-controls input[type="date"] {
-            padding: 10px 15px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            background: white;
-            color: #333;
-        }
-        
-        .dday-controls button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .dday-controls .btn-set {
-            background: #e74c3c;
-        }
-        
-        .dday-controls .btn-skip {
-            background: #f39c12;
-        }
-        
-        .breadcrumb {
-            background: #ecf0f1;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .progress-indicator {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
-        }
-        
-        .progress-step {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #bdc3c7;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin: 0 10px;
             position: relative;
+            overflow: hidden;
         }
-        
-        .progress-step.active {
-            background: #3498db;
-        }
-        
-        .progress-step.completed {
-            background: #2ecc71;
-        }
-        
-        .progress-step:not(:last-child)::after {
+
+        .nav-btn::before {
             content: '';
             position: absolute;
-            left: 100%;
             top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 3px;
-            background: #bdc3c7;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
         }
-        
-        .progress-step.completed:not(:last-child)::after {
-            background: #2ecc71;
+
+        .nav-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .btn-new-quiz {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .btn-dashboard {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease 0.4s both;
+        }
+
+        .step {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .step.active {
+            opacity: 1;
+            background: rgba(255,255,255,0.35);
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .selection-area {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            min-height: 500px;
+            animation: fadeInUp 0.6s ease 0.6s both;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #3498db;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 3px solid transparent;
+            border-radius: 15px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(52, 152, 219, 0.15), transparent);
+            transition: left 0.6s;
+        }
+
+        .card:hover::before {
+            left: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: #3498db;
+            box-shadow: 0 15px 35px rgba(52, 152, 219, 0.3);
+        }
+
+        .card-icon {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .card-meta {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .subject-card {
+            background: white;
+            border: 2px solid #ecf0f1;
+        }
+
+        .subject-card:hover {
+            border-color: #2ecc71;
+            box-shadow: 0 15px 35px rgba(46, 204, 113, 0.3);
+        }
+
+        .session-card {
+            background: white;
+            border: 2px solid #ecf0f1;
+            padding: 25px;
+        }
+
+        .session-card:hover {
+            border-color: #e74c3c;
+            box-shadow: 0 15px 35px rgba(231, 76, 60, 0.3);
+        }
+
+        .session-card.selected {
+            border-color: #e74c3c;
+            background: #fff5f5;
+            transform: translateY(-5px);
+        }
+
+        .session-year {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 8px;
+        }
+
+        .session-info {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-top: 12px;
+        }
+
+        .year-group {
+            margin-bottom: 40px;
+        }
+
+        .year-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 5px solid #3498db;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 18px 45px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-back {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn:disabled:hover {
+            box-shadow: none;
+        }
+
+        .breadcrumb {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 18px 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            color: #7f8c8d;
+            font-size: 1rem;
+            border-left: 4px solid #3498db;
+        }
+
+        .breadcrumb span {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state-icon {
+            font-size: 5rem;
+            margin-bottom: 25px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-nav {
+                flex-direction: column;
+            }
+
+            .nav-btn {
+                min-width: 100%;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step-indicator {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .step {
+                font-size: 0.9rem;
+                padding: 10px 15px;
+            }
+
+            .navigation-buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>시험 준비 설정</h1>
-        
-        <div class="progress-indicator">
-            <div class="progress-step active" id="step-1">1</div>
-            <div class="progress-step" id="step-2">2</div>
-            <div class="progress-step" id="step-3">3</div>
-            <div class="progress-step" id="step-4">4</div>
+        <div class="header">
+            <h1>시험 학습 시스템</h1>
+            <p>효율적인 학습을 위한 스마트 문제 풀이 플랫폼</p>
         </div>
 
-        <!-- 1단계: D-Day 설정 -->
-        <div class="step active" id="step1">
-            <div class="dday-section">
-                <h2 style="border: none; color: white; text-align: center;">🎯 목표 시험일 설정</h2>
-                <p>목표하는 시험일을 설정하여 D-Day를 확인하세요</p>
-                <div class="dday-controls">
-                    <input type="date" id="examDateInput">
-                    <button class="btn-set" onclick="setExamDate()">설정</button>
-                    <button class="btn-skip" onclick="skipDDay()">건너뛰기</button>
-                </div>
-                <div id="ddayDisplay" style="margin-top: 20px; font-size: 1.2rem;"></div>
+        <div class="main-nav" id="mainNav">
+            <button class="nav-btn btn-new-quiz" onclick="showExamSelection()">
+                <span style="position: relative; z-index: 1;">새로 시작하기</span>
+            </button>
+            <button class="nav-btn btn-dashboard" onclick="goToDashboard()">
+                <span style="position: relative; z-index: 1;">대시보드</span>
+            </button>
+        </div>
+
+        <div id="selectionContainer" style="display: none;">
+            <div class="step-indicator">
+                <div class="step active" id="step1">1. 시험 선택</div>
+                <div class="step" id="step2">2. 과목 선택</div>
+                <div class="step" id="step3">3. 회차 선택</div>
             </div>
-        </div>
 
-        <!-- 2단계: 대분류 선택 -->
-        <div class="step" id="step2">
-            <div class="breadcrumb">1단계: 안전 분야 선택</div>
-            <h2>안전 분야를 선택해주세요</h2>
-            <div class="category-grid">
-                <div class="category-card" onclick="selectCategory('industrial')">
-                    <div class="category-title">산업안전</div>
-                    <div class="category-desc">건설안전, 산업안전 관련</div>
+            <div class="selection-area">
+                <div id="breadcrumb" class="breadcrumb" style="display: none;"></div>
+                
+                <div id="examSelection">
+                    <h2 class="section-title">
+                        <span>시험을 선택하세요</span>
+                    </h2>
+                    <div class="card-grid" id="examGrid"></div>
                 </div>
-                <div class="category-card" onclick="selectCategory('fire')">
-                    <div class="category-title">소방안전</div>
-                    <div class="category-desc">화재예방, 소방시설 관련</div>
+
+                <div id="subjectSelection" style="display: none;">
+                    <h2 class="section-title">
+                        <span>과목을 선택하세요</span>
+                    </h2>
+                    <div class="card-grid" id="subjectGrid"></div>
                 </div>
-                <div class="category-card" onclick="selectCategory('disaster')">
-                    <div class="category-title">재난안전</div>
-                    <div class="category-desc">자연재해, 사회재난 관련</div>
+
+                <div id="sessionSelection" style="display: none;">
+                    <h2 class="section-title">
+                        <span>회차를 선택하세요</span>
+                    </h2>
+                    <div id="sessionContainer"></div>
+                </div>
+
+                <div class="navigation-buttons">
+                    <button class="btn btn-back" id="backBtn" onclick="goBack()" style="display: none;">
+                        <span style="position: relative; z-index: 1;">이전 단계</span>
+                    </button>
+                    <button class="btn btn-start" id="startBtn" onclick="startQuiz()" style="display: none;">
+                        <span style="position: relative; z-index: 1;">학습 시작</span>
+                    </button>
                 </div>
             </div>
-        </div>
-
-        <!-- 3단계: 자격증 선택 -->
-        <div class="step" id="step3">
-            <div class="breadcrumb">2단계: 자격증 종류 선택</div>
-            <h2 id="step3-title">자격증을 선택해주세요</h2>
-            <div class="exam-list" id="examTypeList">
-                <!-- 동적으로 생성 -->
-            </div>
-        </div>
-
-        <!-- 4단계: 회차 선택 -->
-        <div class="step" id="step4">
-            <div class="breadcrumb">3단계: 시험 회차 선택</div>
-            <h2 id="step4-title">회차를 선택해주세요</h2>
-            <div class="session-list" id="sessionList">
-                <!-- 동적으로 생성 -->
-            </div>
-        </div>
-
-        <div class="navigation">
-            <button class="nav-btn btn-back" onclick="prevStep()" id="prevBtn" style="display: none;">이전</button>
-            <button class="nav-btn btn-next" onclick="nextStep()" id="nextBtn">다음</button>
         </div>
     </div>
 
     <script>
         let currentStep = 1;
-        let selectedCategory = null;
-        let selectedExamType = null;
+        let selectedExam = null;
+        let selectedSubject = null;
         let selectedSession = null;
-        let examDate = null;
 
-        // 실제 데이터 기반 자격증 정보
-        const examTypeData = {
-            industrial: [
-                { id: 'construction-safety', name: '건설안전기사', desc: '건설현장 안전관리' },
-                { id: 'industrial-safety', name: '산업안전기사', desc: '산업현장 안전관리' }
-            ],
-            fire: [
-                { id: 'fire-safety', name: '소방안전기사', desc: '소방시설 설계·시공' }
-            ],
-            disaster: [
-                { id: 'disaster-prevention', name: '재난안전', desc: '재난관리 및 예방' }
-            ]
-        };
-
-        const sessionData = {
-            'construction-safety': [
-                { id: 'construction-safety-2003-1', name: '2003년 1회' },
-                { id: 'construction-safety-2003-2', name: '2003년 2회' },
-                { id: 'construction-safety-2003-4', name: '2003년 4회' }
-            ]
-        };
-
-        function selectCategory(category) {
-            selectedCategory = category;
-            document.querySelectorAll('.category-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            event.target.closest('.category-card').classList.add('selected');
-            document.getElementById('nextBtn').disabled = false;
+        function showExamSelection() {
+            document.getElementById('mainNav').style.display = 'none';
+            document.getElementById('selectionContainer').style.display = 'block';
+            loadExams();
         }
 
-        function selectExamType(examType) {
-            selectedExamType = examType;
-            document.querySelectorAll('.exam-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            event.target.classList.add('selected');
-            document.getElementById('nextBtn').disabled = false;
+        function goToDashboard() {
+            window.location.href = 'quiz.html';
         }
 
-        function selectSession(session) {
-            selectedSession = session;
-            document.querySelectorAll('.session-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            event.target.classList.add('selected');
-            document.getElementById('nextBtn').disabled = false;
-        }
+        function loadExams() {
+            const exams = ExamUtils.getAllExams();
+            const grid = document.getElementById('examGrid');
+            grid.innerHTML = '';
 
-        function nextStep() {
-            if (currentStep === 4) {
-                // 학습 시작
-                startLearning();
+            if (exams.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📚</div>
+                        <p>등록된 시험이 없습니다.<br>exams-config.js에 시험을 추가해주세요.</p>
+                    </div>
+                `;
                 return;
             }
 
-            // 진행 표시 업데이트
-            document.getElementById(`step-${currentStep}`).classList.add('completed');
-            document.getElementById(`step-${currentStep}`).classList.remove('active');
-            
-            document.getElementById(`step${currentStep}`).classList.remove('active');
-            currentStep++;
-            
-            document.getElementById(`step-${currentStep}`).classList.add('active');
-            document.getElementById(`step${currentStep}`).classList.add('active');
-
-            // 버튼 상태 업데이트
-            document.getElementById('prevBtn').style.display = 'inline-block';
-            document.getElementById('nextBtn').disabled = true;
-
-            if (currentStep === 3) {
-                loadExamTypes();
-            } else if (currentStep === 4) {
-                loadSessions();
-                document.getElementById('nextBtn').textContent = '학습 시작';
-            }
-        }
-
-        function prevStep() {
-            if (currentStep === 1) return;
-            
-            document.getElementById(`step-${currentStep}`).classList.remove('active');
-            document.getElementById(`step${currentStep}`).classList.remove('active');
-            
-            currentStep--;
-            
-            document.getElementById(`step-${currentStep}`).classList.remove('completed');
-            document.getElementById(`step-${currentStep}`).classList.add('active');
-            document.getElementById(`step${currentStep}`).classList.add('active');
-
-            if (currentStep === 1) {
-                document.getElementById('prevBtn').style.display = 'none';
-            }
-
-            document.getElementById('nextBtn').textContent = '다음';
-            
-            // 현재 단계에 따라 nextBtn 활성화 상태 결정
-            if (currentStep === 1) {
-                document.getElementById('nextBtn').disabled = false; // D-Day는 건너뛰기 가능
-            } else if (currentStep === 2) {
-                document.getElementById('nextBtn').disabled = !selectedCategory;
-            } else if (currentStep === 3) {
-                document.getElementById('nextBtn').disabled = !selectedExamType;
-            }
-        }
-
-        function loadExamTypes() {
-            const examTypes = examTypeData[selectedCategory];
-            const container = document.getElementById('examTypeList');
-            const title = document.getElementById('step3-title');
-            
-            const categoryNames = {
-                industrial: '산업안전',
-                fire: '소방안전', 
-                disaster: '재난안전'
-            };
-            
-            title.textContent = `${categoryNames[selectedCategory]} 자격증을 선택해주세요`;
-            
-            container.innerHTML = '';
-            examTypes.forEach(exam => {
-                const div = document.createElement('div');
-                div.className = 'exam-item';
-                div.onclick = () => selectExamType(exam.id);
-                div.innerHTML = `
-                    <div style="font-weight: bold; margin-bottom: 5px;">${exam.name}</div>
-                    <div style="font-size: 0.9rem; color: #666;">${exam.desc}</div>
+            exams.forEach(exam => {
+                const stats = ExamUtils.getExamStats(exam.key);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <span class="card-icon">${exam.icon}</span>
+                    <div class="card-title">${exam.name}</div>
+                    <div class="card-meta">
+                        ${stats.subjectCount}개 과목<br>
+                        ${stats.totalSessions}개 회차<br>
+                        총 ${stats.totalQuestions}문제
+                    </div>
                 `;
-                container.appendChild(div);
+                card.onclick = () => selectExam(exam.key, exam.name);
+                grid.appendChild(card);
             });
         }
 
-        function loadSessions() {
-            const sessions = sessionData[selectedExamType] || [];
-            const container = document.getElementById('sessionList');
-            const title = document.getElementById('step4-title');
+        function selectExam(examKey, examName) {
+            selectedExam = { key: examKey, name: examName };
+            currentStep = 2;
+            updateStepIndicator();
+            updateBreadcrumb();
             
-            const examName = examTypeData[selectedCategory].find(e => e.id === selectedExamType)?.name;
-            title.textContent = `${examName} 회차를 선택해주세요`;
+            document.getElementById('examSelection').style.display = 'none';
+            document.getElementById('subjectSelection').style.display = 'block';
+            document.getElementById('backBtn').style.display = 'block';
             
+            loadSubjects(examKey);
+        }
+
+        function loadSubjects(examKey) {
+            const subjects = ExamUtils.getSubjects(examKey);
+            const grid = document.getElementById('subjectGrid');
+            grid.innerHTML = '';
+
+            if (subjects.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📖</div>
+                        <p>등록된 과목이 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            subjects.forEach(subject => {
+                const card = document.createElement('div');
+                card.className = 'card subject-card';
+                card.innerHTML = `
+                    <div class="card-title">${subject.name}</div>
+                    <div class="card-meta">
+                        ${subject.sessionCount}개 회차
+                    </div>
+                `;
+                card.onclick = () => selectSubject(subject.key, subject.name);
+                grid.appendChild(card);
+            });
+        }
+
+        function selectSubject(subjectKey, subjectName) {
+            selectedSubject = { key: subjectKey, name: subjectName };
+            currentStep = 3;
+            updateStepIndicator();
+            updateBreadcrumb();
+            
+            document.getElementById('subjectSelection').style.display = 'none';
+            document.getElementById('sessionSelection').style.display = 'block';
+            
+            loadSessions(selectedExam.key, subjectKey);
+        }
+
+        function loadSessions(examKey, subjectKey) {
+            const sessionsByYear = ExamUtils.getSessionsByYear(examKey, subjectKey);
+            const container = document.getElementById('sessionContainer');
             container.innerHTML = '';
-            sessions.forEach(session => {
-                const div = document.createElement('div');
-                div.className = 'session-item';
-                div.onclick = () => selectSession(session.id);
-                div.textContent = session.name;
-                container.appendChild(div);
+
+            if (Object.keys(sessionsByYear).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <p>등록된 회차가 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedYears = Object.keys(sessionsByYear).sort((a, b) => b - a);
+
+            sortedYears.forEach(year => {
+                const yearGroup = document.createElement('div');
+                yearGroup.className = 'year-group';
+                
+                const yearTitle = document.createElement('div');
+                yearTitle.className = 'year-title';
+                yearTitle.textContent = `${year}년`;
+                yearGroup.appendChild(yearTitle);
+
+                const grid = document.createElement('div');
+                grid.className = 'card-grid';
+
+                sessionsByYear[year].forEach(session => {
+                    const card = document.createElement('div');
+                    card.className = 'card session-card';
+                    card.setAttribute('data-session-id', session.id);
+                    card.innerHTML = `
+                        <div class="session-year">${session.session}회</div>
+                        <div class="card-title">${session.year}년 ${session.session}회차</div>
+                        <div class="session-info">
+                            ${session.questionCount}문제
+                        </div>
+                    `;
+                    card.onclick = () => selectSession(session, card);
+                    grid.appendChild(card);
+                });
+
+                yearGroup.appendChild(grid);
+                container.appendChild(yearGroup);
             });
         }
 
-        function setExamDate() {
-            const input = document.getElementById('examDateInput');
-            if (input.value) {
-                examDate = new Date(input.value);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                if (examDate < today) {
-                    alert('오늘 이후의 날짜를 선택해주세요.');
-                    return;
-                }
-                
-                updateDDayDisplay();
-                document.getElementById('nextBtn').disabled = false;
-            } else {
-                alert('시험일을 선택해주세요.');
+        function selectSession(session, cardElement) {
+            selectedSession = session;
+            document.getElementById('startBtn').style.display = 'block';
+            
+            document.querySelectorAll('.session-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            cardElement.classList.add('selected');
+        }
+
+        function goBack() {
+            if (currentStep === 2) {
+                currentStep = 1;
+                selectedExam = null;
+                document.getElementById('subjectSelection').style.display = 'none';
+                document.getElementById('examSelection').style.display = 'block';
+                document.getElementById('backBtn').style.display = 'none';
+            } else if (currentStep === 3) {
+                currentStep = 2;
+                selectedSubject = null;
+                selectedSession = null;
+                document.getElementById('sessionSelection').style.display = 'none';
+                document.getElementById('subjectSelection').style.display = 'block';
+                document.getElementById('startBtn').style.display = 'none';
             }
+            
+            updateStepIndicator();
+            updateBreadcrumb();
         }
 
-        function skipDDay() {
-            examDate = null;
-            document.getElementById('examDateInput').value = '';
-            document.getElementById('ddayDisplay').innerHTML = '<div style="color: white; font-weight: bold;">⏭️ D-Day 설정을 건너뛰었습니다</div>';
-            document.getElementById('nextBtn').disabled = false;
-        }
-
-        function updateDDayDisplay() {
-            const display = document.getElementById('ddayDisplay');
-            if (!examDate) return;
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const examDateOnly = new Date(examDate);
-            examDateOnly.setHours(0, 0, 0, 0);
-            
-            const timeDiff = examDateOnly.getTime() - today.getTime();
-            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-            
-            if (daysDiff > 0) {
-                display.innerHTML = `🎯 D-${daysDiff} (${daysDiff}일 남음)`;
-            } else if (daysDiff === 0) {
-                display.innerHTML = '🔥 D-DAY! 오늘이 시험일입니다!';
-            } else {
-                display.innerHTML = `✅ D+${Math.abs(daysDiff)} (시험이 지났습니다)`;
+        function startQuiz() {
+            if (!selectedSession) {
+                alert('회차를 선택해주세요.');
+                return;
             }
-        }
 
-        function startLearning() {
-            // 여기서 실제 문제 풀이 페이지로 전환
-            const config = {
-                category: selectedCategory,
-                examType: selectedExamType,
+            const quizConfig = {
+                exam: selectedExam.key,
+                examName: selectedExam.name,
+                subject: selectedSubject.key,
+                subjectName: selectedSubject.name,
                 session: selectedSession,
-                examDate: examDate ? examDate.toISOString() : null
+                files: [selectedSession.fileName]
             };
-            
-            // 설정을 localStorage에 저장
-            localStorage.setItem('quizConfig', JSON.stringify(config));
-            
-            // 페이지 전환 애니메이션
-            document.querySelector('.container').style.transform = 'translateX(-100%)';
-            document.querySelector('.container').style.opacity = '0';
-            
-            setTimeout(() => {
-                window.location.href = 'quiz.html';
-            }, 500);
+
+            localStorage.setItem('quizConfig', JSON.stringify(quizConfig));
+            localStorage.setItem('quizMode', 'full');
+            ExamStorage.saveSelection(selectedExam.key, selectedSubject.key, selectedSession);
+
+            window.location.href = 'solve.html';
         }
 
-        // 초기 설정
-        document.getElementById('nextBtn').disabled = false; // D-Day는 건너뛰기 가능
+        function updateStepIndicator() {
+            for (let i = 1; i <= 3; i++) {
+                const step = document.getElementById(`step${i}`);
+                if (i === currentStep) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            }
+        }
+
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            let text = '';
+
+            if (selectedExam) {
+                text += `<span>${selectedExam.name}</span>`;
+            }
+            if (selectedSubject) {
+                text += ` > <span>${selectedSubject.name}</span>`;
+            }
+            if (selectedSession) {
+                text += ` > <span>${selectedSession.year}년 ${selectedSession.session}회</span>`;
+            }
+
+            if (text) {
+                breadcrumb.innerHTML = text;
+                breadcrumb.style.display = 'block';
+            } else {
+                breadcrumb.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
