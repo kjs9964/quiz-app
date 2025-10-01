@@ -180,7 +180,7 @@
             margin-bottom: 30px;
         }
 
-        .category-card, .exam-card {
+        .category-card, .exam-card, .card {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border: 2px solid transparent;
             border-radius: 15px;
@@ -191,7 +191,7 @@
             overflow: hidden;
         }
 
-        .category-card::before, .exam-card::before {
+        .category-card::before, .exam-card::before, .card::before {
             content: '';
             position: absolute;
             top: -50%;
@@ -203,11 +203,11 @@
             transition: opacity 0.3s ease;
         }
 
-        .category-card:hover::before, .exam-card:hover::before {
+        .category-card:hover::before, .exam-card:hover::before, .card:hover::before {
             opacity: 1;
         }
 
-        .category-card:hover, .exam-card:hover {
+        .category-card:hover, .exam-card:hover, .card:hover {
             transform: translateY(-8px);
             box-shadow: 0 12px 30px rgba(0,0,0,0.15);
             border-color: #3498db;
@@ -219,26 +219,26 @@
             box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
         }
 
-        .category-icon, .exam-icon {
+        .category-icon, .exam-icon, .card-icon {
             font-size: 3rem;
             margin-bottom: 15px;
             display: block;
         }
 
-        .category-name, .exam-name {
+        .category-name, .exam-name, .card-title {
             font-size: 1.4rem;
             font-weight: bold;
             color: #2c3e50;
             margin-bottom: 10px;
         }
 
-        .category-stats, .exam-stats {
+        .category-stats, .exam-stats, .card-meta {
             color: #7f8c8d;
             font-size: 0.95rem;
             line-height: 1.6;
         }
 
-        .data-badge {
+        .data-badge, .card-badge {
             display: inline-block;
             background: #2ecc71;
             color: white;
@@ -249,7 +249,7 @@
             margin-top: 8px;
         }
 
-        .no-data-badge {
+        .no-data-badge, .card-badge.empty {
             background: #95a5a6;
         }
 
@@ -511,6 +511,60 @@
             }
         };
 
+        const ExamUtils = {
+            getAllCategories: function() {
+                return Object.keys(EXAM_STRUCTURE).map(key => ({
+                    key: key,
+                    name: EXAM_STRUCTURE[key].displayName,
+                    icon: EXAM_STRUCTURE[key].icon
+                }));
+            },
+
+            getCategoryStats: function(categoryKey) {
+                const category = EXAM_STRUCTURE[categoryKey];
+                if (!category) return { examCount: 0, totalSessions: 0, totalQuestions: 0 };
+
+                const exams = Object.values(category.exams);
+                return {
+                    examCount: exams.length,
+                    totalSessions: exams.reduce((sum, exam) => sum + exam.sessions.length, 0),
+                    totalQuestions: exams.reduce((sum, exam) => 
+                        sum + exam.sessions.reduce((s, sess) => s + (sess.questionCount || 0), 0), 0)
+                };
+            },
+
+            getExamsByCategory: function(categoryKey) {
+                const category = EXAM_STRUCTURE[categoryKey];
+                if (!category) return [];
+
+                return Object.keys(category.exams).map(examKey => {
+                    const exam = category.exams[examKey];
+                    return {
+                        key: examKey,
+                        name: exam.displayName,
+                        icon: exam.icon,
+                        sessionCount: exam.sessions.length,
+                        hasData: exam.sessions.length > 0
+                    };
+                });
+            },
+
+            getSessionsByYear: function(categoryKey, examKey) {
+                const exam = EXAM_STRUCTURE[categoryKey]?.exams[examKey];
+                if (!exam) return {};
+
+                const sessionsByYear = {};
+                exam.sessions.forEach(session => {
+                    if (!sessionsByYear[session.year]) {
+                        sessionsByYear[session.year] = [];
+                    }
+                    sessionsByYear[session.year].push(session);
+                });
+
+                return sessionsByYear;
+            }
+        };
+
         let selectedCategory = null;
         let selectedExam = null;
         let selectedSession = null;
@@ -519,7 +573,7 @@
         function showExamSelection() {
             document.getElementById('mainNav').style.display = 'none';
             document.getElementById('selectionContainer').style.display = 'block';
-            renderCategories();
+            loadCategories();
         }
 
         function goToDashboard() {
@@ -532,86 +586,88 @@
             window.location.href = 'quiz.html';
         }
 
-        function renderCategories() {
+        function loadCategories() {
+            const categories = ExamUtils.getAllCategories();
             const grid = document.getElementById('categoryGrid');
             grid.innerHTML = '';
 
-            Object.entries(EXAM_STRUCTURE).forEach(([key, category]) => {
-                const totalSessions = Object.values(category.exams)
-                    .reduce((sum, exam) => sum + exam.sessions.length, 0);
-                const totalQuestions = Object.values(category.exams)
-                    .reduce((sum, exam) => {
-                        return sum + exam.sessions.reduce((s, sess) => s + (sess.questionCount || 0), 0);
-                    }, 0);
-
+            categories.forEach(category => {
+                const stats = ExamUtils.getCategoryStats(category.key);
                 const card = document.createElement('div');
-                card.className = 'category-card';
+                card.className = 'card';
                 card.innerHTML = `
-                    <span class="category-icon">${category.icon}</span>
-                    <div class="category-name">${category.displayName}</div>
-                    <div class="category-stats">
-                        ${Object.keys(category.exams).length}개 시험<br>
-                        ${totalSessions}개 회차<br>
-                        ${totalQuestions.toLocaleString()}개 문제
+                    <span class="card-icon">${category.icon}</span>
+                    <div class="card-title">${category.name}</div>
+                    <div class="card-meta">
+                        ${stats.examCount}개 시험<br>
+                        ${stats.totalSessions}개 회차<br>
+                        총 ${stats.totalQuestions}문제
                     </div>
                 `;
-                card.onclick = () => selectCategory(key, category);
+                card.onclick = () => selectCategory(category.key, category.name);
                 grid.appendChild(card);
             });
         }
 
-        function selectCategory(key, category) {
-            selectedCategory = { key, name: category.displayName };
-            selectedExam = null;
-            selectedSession = null;
-            
+        function selectCategory(categoryKey, categoryName) {
+            selectedCategory = { key: categoryKey, name: categoryName };
             currentStep = 2;
             updateStepIndicator();
             updateBreadcrumb();
             
             document.getElementById('categorySelection').style.display = 'none';
             document.getElementById('examSelection').style.display = 'block';
-            document.getElementById('backBtn').style.display = 'inline-block';
+            document.getElementById('backBtn').style.display = 'block';
             
-            renderExams(category.exams);
+            loadExams(categoryKey);
         }
 
-        function renderExams(exams) {
+        function loadExams(categoryKey) {
+            const exams = ExamUtils.getExamsByCategory(categoryKey);
             const grid = document.getElementById('examGrid');
             grid.innerHTML = '';
 
-            Object.entries(exams).forEach(([key, exam]) => {
-                const hasData = exam.sessions.length > 0;
-                const totalQuestions = exam.sessions.reduce((sum, sess) => sum + (sess.questionCount || 0), 0);
+            if (exams.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📚</div>
+                        <p>등록된 시험이 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
 
+            exams.forEach(exam => {
                 const card = document.createElement('div');
-                card.className = 'exam-card';
-                if (!hasData) card.style.opacity = '0.6';
+                card.className = 'card';
+                
+                const badgeHtml = exam.hasData 
+                    ? '<span class="card-badge">데이터 있음</span>'
+                    : '<span class="card-badge empty">준비중</span>';
                 
                 card.innerHTML = `
-                    <span class="exam-icon">${exam.icon}</span>
-                    <div class="exam-name">${exam.displayName}</div>
-                    <div class="exam-stats">
-                        ${exam.sessions.length}개 회차<br>
-                        ${totalQuestions.toLocaleString()}개 문제
+                    ${badgeHtml}
+                    <span class="card-icon">${exam.icon}</span>
+                    <div class="card-title">${exam.name}</div>
+                    <div class="card-meta">
+                        ${exam.sessionCount > 0 ? `${exam.sessionCount}개 회차` : '회차 준비중'}
                     </div>
-                    <span class="data-badge ${hasData ? '' : 'no-data-badge'}">
-                        ${hasData ? '데이터 있음' : '준비 중'}
-                    </span>
                 `;
                 
-                if (hasData) {
-                    card.onclick = () => selectExam(key, exam);
+                if (exam.hasData) {
+                    card.onclick = () => selectExam(exam.key, exam.name);
+                } else {
+                    card.style.opacity = '0.6';
+                    card.style.cursor = 'not-allowed';
+                    card.onclick = () => alert('아직 데이터가 준비되지 않았습니다.');
                 }
                 
                 grid.appendChild(card);
             });
         }
 
-        function selectExam(key, exam) {
-            selectedExam = { key, name: exam.displayName };
-            selectedSession = null;
-            
+        function selectExam(examKey, examName) {
+            selectedExam = { key: examKey, name: examName };
             currentStep = 3;
             updateStepIndicator();
             updateBreadcrumb();
@@ -619,20 +675,23 @@
             document.getElementById('examSelection').style.display = 'none';
             document.getElementById('sessionSelection').style.display = 'block';
             
-            renderSessions(exam.sessions);
+            loadSessions(selectedCategory.key, examKey);
         }
 
-        function renderSessions(sessions) {
+        function loadSessions(categoryKey, examKey) {
+            const sessionsByYear = ExamUtils.getSessionsByYear(categoryKey, examKey);
             const container = document.getElementById('sessionContainer');
             container.innerHTML = '';
 
-            const sessionsByYear = {};
-            sessions.forEach(session => {
-                if (!sessionsByYear[session.year]) {
-                    sessionsByYear[session.year] = [];
-                }
-                sessionsByYear[session.year].push(session);
-            });
+            if (Object.keys(sessionsByYear).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <p>등록된 회차가 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
 
             const sortedYears = Object.keys(sessionsByYear).sort((a, b) => b - a);
 
