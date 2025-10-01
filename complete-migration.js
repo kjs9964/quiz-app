@@ -1,5 +1,5 @@
 // complete-migration.js - 전체 데이터베이스 마이그레이션 자동화 스크립트
-// 하위 폴더 재귀 탐색 버전
+// 하위 폴더 재귀 탐색 + UTF-8 BOM 제거 + 모든 필수 함수 포함
 // 사용법: node complete-migration.js
 
 const fs = require('fs');
@@ -90,7 +90,6 @@ const ICON_MAP = {
 // 파일명 변환 함수들
 // ========================================
 
-// 일반 패턴: 2003_건설안전기사_1회.csv
 function convertStandardPattern(originalName) {
   const match = originalName.match(/^(\d{4})_(.+?)_(\d+)회\.csv$/);
   if (!match) return null;
@@ -106,7 +105,6 @@ function convertStandardPattern(originalName) {
   return { fileName: `${examCode}-${year}-${session}.csv`, examName, year, session };
 }
 
-// 통합 패턴: 2020_건설안전기사_1,2회_통합.csv
 function convertMergedPattern(originalName) {
   const match = originalName.match(/^(\d{4})_(.+?)_(\d+),(\d+)회[_\s]*(통합|통합기출문제)?\.csv$/);
   if (!match) return null;
@@ -119,7 +117,6 @@ function convertMergedPattern(originalName) {
   return { fileName: `${examCode}-${year}-${session1}.csv`, examName, year, session: session1 };
 }
 
-// 추가시험 패턴: 2005_산업안전기사_1회추가.csv
 function convertExtraPattern(originalName) {
   const match = originalName.match(/^(\d{4})_(.+?)_(\d+)회추가\.csv$/);
   if (!match) return null;
@@ -132,14 +129,12 @@ function convertExtraPattern(originalName) {
   return { fileName: `${examCode}-${year}-${session}-extra.csv`, examName, year, session: `${session}-extra` };
 }
 
-// 국가직/지방직 과목별 패턴: 2015_국가7급_도시계획-3.csv
 function convertGovExamPattern(originalName) {
   const match = originalName.match(/^(\d{4})_(국가|지방)(\d+)급_(.+?)-(.)\.csv$/);
   if (!match) return null;
   
   const [_, year, type, grade, subject, sessionCode] = match;
   
-  // 시험명 매핑
   let examName;
   if (type === '국가' && grade === '7') examName = '방재안전직(국가7급)';
   else if (type === '국가' && grade === '9') examName = '방재안전직(국가9급)';
@@ -149,7 +144,6 @@ function convertGovExamPattern(originalName) {
   const examCode = EXAM_MAP[examName];
   if (!examCode) return null;
   
-  // 과목명 영어 변환
   const subjectMap = {
     '도시계획': 'urban',
     '방재관계법규': 'law',
@@ -159,7 +153,6 @@ function convertGovExamPattern(originalName) {
   
   const subjectCode = subjectMap[subject] || subject;
   
-  // 회차 코드 변환 (가나다 -> 1,2,3)
   const sessionMap = {
     '가': '1', '나': '2', '다': '3', '라': '4', '마': '5',
     'A': '1', 'B': '2', 'C': '3', 'D': '4',
@@ -178,12 +171,10 @@ function convertGovExamPattern(originalName) {
   };
 }
 
-// 방재기사 패턴: 2019_방재기사_5회.csv
 function convertDisasterPattern(originalName) {
   return convertStandardPattern(originalName);
 }
 
-// 모든 패턴 시도
 function convertFileName(originalName) {
   return convertStandardPattern(originalName) ||
          convertMergedPattern(originalName) ||
@@ -205,7 +196,6 @@ function getAllCsvFiles(dir) {
     const stat = fs.statSync(fullPath);
     
     if (stat.isDirectory()) {
-      // 재귀적으로 하위 폴더 탐색
       results = results.concat(getAllCsvFiles(fullPath));
     } else if (file.toLowerCase().endsWith('.csv')) {
       results.push(fullPath);
@@ -239,7 +229,6 @@ function processAndCopyFiles() {
     if (converted) {
       const destPath = path.join(OUTPUT_DIR, converted.fileName);
       
-      // 중복 체크
       if (processedFiles.includes(converted.fileName)) {
         console.warn(`⚠️  중복 파일명: ${converted.fileName} (원본: ${fileName})`);
       }
@@ -287,27 +276,22 @@ function analyzeCSVFiles() {
         skipEmptyLines: true
       });
       
-      // 파일명 파싱
       const parts = file.replace('.csv', '').split('-');
       
-      // 패턴별 처리
       let examCode, year, session;
       
       if (parts.length >= 3) {
-        // 일반 패턴: const-safety-2003-1.csv
         if (/^\d{4}$/.test(parts[parts.length - 2])) {
           session = parts[parts.length - 1];
           year = parts[parts.length - 2];
           examCode = parts.slice(0, parts.length - 2).join('-');
         } else {
-          // 다른 패턴들
           year = parts.find(p => /^\d{4}$/.test(p));
           session = parts[parts.length - 1];
           examCode = parts.slice(0, parts.indexOf(year)).join('-');
         }
       }
       
-      // 원래 시험명 찾기
       const examName = Object.keys(EXAM_MAP).find(key => EXAM_MAP[key] === examCode);
       
       if (!examName) {
@@ -342,7 +326,6 @@ function generateExamsConfig(examData) {
   
   const structure = {};
   
-  // 카테고리별 구조 생성
   Object.keys(CATEGORY_MAP).forEach(category => {
     structure[category] = {
       displayName: category,
@@ -389,6 +372,7 @@ const ExamUtils = {
                 name: exam.displayName,
                 icon: exam.icon,
                 sessionCount: sessionCount,
+                hasData: sessionCount > 0,
                 sessions: exam.sessions || []
             };
         });
@@ -399,6 +383,44 @@ const ExamUtils = {
             return [];
         }
         return EXAM_STRUCTURE[categoryKey].exams[examKey].sessions || [];
+    },
+    
+    getSessionsByYear(categoryKey, examKey) {
+        const sessions = this.getSessionsByExam(categoryKey, examKey);
+        const grouped = {};
+        
+        sessions.forEach(session => {
+            if (!grouped[session.year]) {
+                grouped[session.year] = [];
+            }
+            grouped[session.year].push(session);
+        });
+        
+        return grouped;
+    },
+    
+    getCategoryStats(categoryKey) {
+        if (!EXAM_STRUCTURE[categoryKey]) return { examCount: 0, totalSessions: 0, totalQuestions: 0 };
+        
+        const exams = EXAM_STRUCTURE[categoryKey].exams;
+        let totalSessions = 0;
+        let totalQuestions = 0;
+        
+        Object.values(exams).forEach(exam => {
+            if (exam.sessions) {
+                totalSessions += exam.sessions.length;
+                exam.sessions.forEach(session => {
+                    totalQuestions += session.questionCount || 0;
+                });
+            }
+        });
+        
+        return {
+            categoryName: EXAM_STRUCTURE[categoryKey].displayName,
+            examCount: Object.keys(exams).length,
+            totalSessions,
+            totalQuestions
+        };
     },
     
     getStatistics() {
@@ -438,12 +460,6 @@ ${utilityFunctions}`;
   
   fs.writeFileSync(CONFIG_OUTPUT, configContent, { encoding: 'utf8' });
   console.log(`✅ exams-config.js 생성 완료\n`);
-  
-  // UTF-8 BOM 없이 저장 확인
-  const savedContent = fs.readFileSync(CONFIG_OUTPUT, 'utf8');
-  if (savedContent.includes('ìž')) {
-    console.warn('⚠️  UTF-8 인코딩 문제 발견 - 파일 재생성 필요');
-  }
 }
 
 // ========================================
@@ -500,7 +516,7 @@ function main() {
     console.log('✅ 모든 마이그레이션 작업이 완료되었습니다!\n');
     console.log('다음 단계:');
     console.log('1. git add public/data/*.csv public/exams-config.js');
-    console.log('2. git commit -m "feat: 전체 데이터베이스 마이그레이션 완료"');
+    console.log('2. git commit -m "fix: 전체 마이그레이션 - UTF-8 BOM 제거 및 모든 함수 포함"');
     console.log('3. git push origin main');
     
   } catch (error) {

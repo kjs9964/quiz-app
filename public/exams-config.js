@@ -1,5 +1,5 @@
 // exams-config.js - 시험 데이터 구조 설정 파일
-// 자동 생성됨 - 2025. 10. 1. 오후 2:08:41
+// 자동 생성됨 - 2025. 10. 1. 오후 4:09:16
 
 const EXAM_STRUCTURE = {
     "재난안전": {
@@ -2096,6 +2096,7 @@ const ExamUtils = {
                 name: exam.displayName,
                 icon: exam.icon,
                 sessionCount: sessionCount,
+                hasData: sessionCount > 0,
                 sessions: exam.sessions || []
             };
         });
@@ -2106,6 +2107,44 @@ const ExamUtils = {
             return [];
         }
         return EXAM_STRUCTURE[categoryKey].exams[examKey].sessions || [];
+    },
+    
+    getSessionsByYear(categoryKey, examKey) {
+        const sessions = this.getSessionsByExam(categoryKey, examKey);
+        const grouped = {};
+        
+        sessions.forEach(session => {
+            if (!grouped[session.year]) {
+                grouped[session.year] = [];
+            }
+            grouped[session.year].push(session);
+        });
+        
+        return grouped;
+    },
+    
+    getCategoryStats(categoryKey) {
+        if (!EXAM_STRUCTURE[categoryKey]) return { examCount: 0, totalSessions: 0, totalQuestions: 0 };
+        
+        const exams = EXAM_STRUCTURE[categoryKey].exams;
+        let totalSessions = 0;
+        let totalQuestions = 0;
+        
+        Object.values(exams).forEach(exam => {
+            if (exam.sessions) {
+                totalSessions += exam.sessions.length;
+                exam.sessions.forEach(session => {
+                    totalQuestions += session.questionCount || 0;
+                });
+            }
+        });
+        
+        return {
+            categoryName: EXAM_STRUCTURE[categoryKey].displayName,
+            examCount: Object.keys(exams).length,
+            totalSessions,
+            totalQuestions
+        };
     },
     
     getStatistics() {
