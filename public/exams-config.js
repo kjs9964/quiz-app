@@ -1,5 +1,5 @@
 // exams-config.js - 시험 데이터 구조 설정 파일
-// 자동 생성됨 - 2025. 10. 1. 오후 4:09:16
+// 자동 생성됨 - 2025. 10. 1. 오후 4:41:57
 
 const EXAM_STRUCTURE = {
     "재난안전": {
@@ -2170,6 +2170,44 @@ const ExamUtils = {
     }
 };
 
+// localStorage 저장용 헬퍼
+const ExamStorage = {
+    saveSelection(categoryKey, examKey, sessionInfo) {
+        const selection = {
+            category: categoryKey,
+            exam: examKey,
+            session: sessionInfo,
+            selectedAt: new Date().toISOString()
+        };
+        localStorage.setItem('currentExamSelection', JSON.stringify(selection));
+    },
+    
+    getSelection() {
+        const saved = localStorage.getItem('currentExamSelection');
+        return saved ? JSON.parse(saved) : null;
+    },
+    
+    saveStudyRecord(categoryKey, examKey, year, session, record) {
+        const key = `study_${categoryKey}_${examKey}_${year}_${session}`;
+        const history = JSON.parse(localStorage.getItem(key) || '[]');
+        history.push({
+            ...record,
+            timestamp: new Date().toISOString()
+        });
+        
+        if (history.length > 50) {
+            history.splice(0, history.length - 50);
+        }
+        
+        localStorage.setItem(key, JSON.stringify(history));
+    },
+    
+    getStudyRecords(categoryKey, examKey, year, session) {
+        const key = `study_${categoryKey}_${examKey}_${year}_${session}`;
+        return JSON.parse(localStorage.getItem(key) || '[]');
+    }
+};
+
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { EXAM_STRUCTURE, ExamUtils };
+    module.exports = { EXAM_STRUCTURE, ExamUtils, ExamStorage };
 }
