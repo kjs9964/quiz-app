@@ -79,19 +79,19 @@ const EXAM_STRUCTURE = {
                     {
                         year: 2003,
                         session: 1,
-                        fileName: "constructionsafety20031.csv",
+                        fileName: "construction-safety-2003-1.csv",
                         questionCount: 120
                     },
                     {
                         year: 2003,
                         session: 2,
-                        fileName: "constructionsafety20032.csv",
+                        fileName: "construction-safety-2003-2.csv",
                         questionCount: 120
                     },
                     {
                         year: 2003,
                         session: 4,
-                        fileName: "constructionsafety20034.csv",
+                        fileName: "construction-safety-2003-4.csv",
                         questionCount: 120
                     }
                 ]
