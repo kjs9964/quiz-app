@@ -759,7 +759,15 @@
                     totalQuestions = currentQuestions.length;
                     
                 } else {
-                    const response = await fetch(`/api/exams/${config.session}`);
+                    // config.session은 이제 문자열 ID (예: "constructionsafety20031")
+                    const sessionId = config.session;
+                    
+                    if (!sessionId) {
+                        throw new Error('세션 정보가 없습니다.');
+                    }
+                    
+                    console.log('Loading questions from:', sessionId);
+                    const response = await fetch(`/api/exams/${sessionId}`);
                     const data = await response.json();
                     
                     if (data.error) {

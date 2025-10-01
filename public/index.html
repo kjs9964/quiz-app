@@ -197,12 +197,16 @@
                 return;
             }
 
+            // fileName에서 .csv 제거하여 API 경로로 사용
+            const sessionId = selectedSession.fileName.replace('.csv', '');
+
             const quizConfig = {
                 category: selectedCategory.key,
                 categoryName: selectedCategory.name,
                 exam: selectedExam.key,
                 examName: selectedExam.name,
-                session: selectedSession,
+                session: sessionId,  // API 호출용 ID
+                sessionInfo: selectedSession,  // 전체 정보
                 files: [selectedSession.fileName]
             };
 
@@ -210,6 +214,7 @@
             localStorage.setItem('quizMode', 'full');
             ExamStorage.saveSelection(selectedCategory.key, selectedExam.key, selectedSession);
 
+            console.log('Quiz Config:', quizConfig);
             window.location.href = 'solve.html';
         }
 
