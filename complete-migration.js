@@ -244,7 +244,13 @@ function processAndCopyFiles() {
         console.warn(`⚠️  중복 파일명: ${converted.fileName} (원본: ${fileName})`);
       }
       
-      fs.copyFileSync(fullPath, destPath);
+      // UTF-8 BOM 제거하면서 복사
+      let content = fs.readFileSync(fullPath, 'utf8');
+      if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+      }
+      fs.writeFileSync(destPath, content, { encoding: 'utf8' });
+      
       console.log(`✅ ${fileName} → ${converted.fileName}`);
       processedFiles.push(converted.fileName);
       successCount++;
@@ -269,7 +275,13 @@ function analyzeCSVFiles() {
   
   files.forEach(file => {
     try {
-      const content = fs.readFileSync(path.join(OUTPUT_DIR, file), 'utf8');
+      let content = fs.readFileSync(path.join(OUTPUT_DIR, file), 'utf8');
+      
+      // UTF-8 BOM 제거
+      if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+      }
+      
       const parsed = Papa.parse(content, {
         header: true,
         skipEmptyLines: true
@@ -424,8 +436,14 @@ const EXAM_STRUCTURE = ${JSON.stringify(structure, null, 4)};
 
 ${utilityFunctions}`;
   
-  fs.writeFileSync(CONFIG_OUTPUT, configContent, 'utf8');
+  fs.writeFileSync(CONFIG_OUTPUT, configContent, { encoding: 'utf8' });
   console.log(`✅ exams-config.js 생성 완료\n`);
+  
+  // UTF-8 BOM 없이 저장 확인
+  const savedContent = fs.readFileSync(CONFIG_OUTPUT, 'utf8');
+  if (savedContent.includes('ìž')) {
+    console.warn('⚠️  UTF-8 인코딩 문제 발견 - 파일 재생성 필요');
+  }
 }
 
 // ========================================

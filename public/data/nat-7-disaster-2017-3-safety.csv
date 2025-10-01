@@ -1,4 +1,4 @@
-﻿"Test Name","Year","Session","Subject","Number","Question","Question_image","Option 1","Option 2","Option 3","Option 4","Answer"
+"Test Name","Year","Session","Subject","Number","Question","Question_image","Option 1","Option 2","Option 3","Option 4","Answer"
 "국가7급","2017","다","안전관리론","1","㉠, ㉡에 들어갈 용어로 옳게 짝지은 것은?\n( ㉠ ) : 필요한 물건, 정보, 에너지 등의 공급이 없어 작업자가 움직이려 해도 움직일 수 없으므로 발생하는 과오\n( ㉡ ) : 작업자 자신으로부터 발생한 과오","","1차 과오(Primary error) - 2차 과오(Secondary error)","2차 과오(Secondary error) - 1차 과오(Primary error)","1차 과오(Primary error) - 지시 과오(Command error)","지시 과오(Command error) - 1차 과오(Primary error)","4"
 "국가7급","2017","다","안전관리론","2","건축물의 피난구조 및 소방시설에 대한 설명으로 옳은 것은?","","특별피난계단은 피난층 또는 지상까지 직접 연결되어야 하며, 피난의 방향으로 열 수 있는 구조이어야 한다.","방화문은 피난을 위해 항상 열려 있어야 하며, 닫혀 있는 경우는 화재 시 자동으로 열리는 구조이어야 한다.","간이완강기는 사용자의 몸무게에 따라 자동으로 내려올 수 있는 기구 중 사용자가 교대하여 연속적으로 사용할 수 있는 것이어야 한다.","옥내소화전설비는 거주자가 사용하는 설비로, 15분 이상 유효하게 작동되는 것이어야 한다.","1"
 "국가7급","2017","다","안전관리론","3","시스템 안전 해석기법 중 정량적, 정성적 분석이 모두 가능한 것은?","","인간과오율 추정법 (Technique of Human Error Rate Prediction)","고장의 형과 영향 분석 (Failure Mode and Effect Analysis)","사건수 분석 (Event Tree Analysis)","결함수 분석 (Fault Tree Analysis)","4"
