@@ -1,258 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <script>
-        let currentStep = 1;
-        let selectedCategory = null;
-        let selectedExam = null;
-        let selectedSession = null;
-
-        function showExamSelection() {
-            document.getElementById('mainNav').style.display = 'none';
-            document.getElementById('selectionContainer').style.display = 'block';
-            loadCategories();
-        }
-
-        function goToDashboard() {
-            window.location.href = 'quiz.html';
-        }
-
-        // 1단계: 대분류(분야) 선택
-        function loadCategories() {
-            const categories = ExamUtils.getAllCategories();
-            const grid = document.getElementById('categoryGrid');
-            grid.innerHTML = '';
-
-            categories.forEach(category => {
-                const stats = ExamUtils.getCategoryStats(category.key);
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <span class="card-icon">${category.icon}</span>
-                    <div class="card-title">${category.name}</div>
-                    <div class="card-meta">
-                        ${stats.examCount}개 시험<br>
-                        ${stats.totalSessions}개 회차<br>
-                        총 ${stats.totalQuestions}문제
-                    </div>
-                `;
-                card.onclick = () => selectCategory(category.key, category.name);
-                grid.appendChild(card);
-            });
-        }
-
-        function selectCategory(categoryKey, categoryName) {
-            selectedCategory = { key: categoryKey, name: categoryName };
-            currentStep = 2;
-            updateStepIndicator();
-            updateBreadcrumb();
-            
-            document.getElementById('categorySelection').style.display = 'none';
-            document.getElementById('examSelection').style.display = 'block';
-            document.getElementById('backBtn').style.display = 'block';
-            
-            loadExams(categoryKey);
-        }
-
-        // 2단계: 중분류(시험) 선택
-        function loadExams(categoryKey) {
-            const exams = ExamUtils.getExamsByCategory(categoryKey);
-            const grid = document.getElementById('examGrid');
-            grid.innerHTML = '';
-
-            if (exams.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📚</div>
-                        <p>등록된 시험이 없습니다.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            exams.forEach(exam => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                
-                const badgeHtml = exam.hasData 
-                    ? '<span class="card-badge">데이터 있음</span>'
-                    : '<span class="card-badge empty">준비중</span>';
-                
-                card.innerHTML = `
-                    ${badgeHtml}
-                    <span class="card-icon">${exam.icon}</span>
-                    <div class="card-title">${exam.name}</div>
-                    <div class="card-meta">
-                        ${exam.sessionCount > 0 ? `${exam.sessionCount}개 회차` : '회차 준비중'}
-                    </div>
-                `;
-                
-                if (exam.hasData) {
-                    card.onclick = () => selectExam(exam.key, exam.name);
-                } else {
-                    card.style.opacity = '0.6';
-                    card.style.cursor = 'not-allowed';
-                    card.onclick = () => alert('아직 데이터가 준비되지 않았습니다.');
-                }
-                
-                grid.appendChild(card);
-            });
-        }
-
-        function selectExam(examKey, examName) {
-            selectedExam = { key: examKey, name: examName };
-            currentStep = 3;
-            updateStepIndicator();
-            updateBreadcrumb();
-            
-            document.getElementById('examSelection').style.display = 'none';
-            document.getElementById('sessionSelection').style.display = 'block';
-            
-            loadSessions(selectedCategory.key, examKey);
-        }
-
-        // 3단계: 소분류(회차) 선택
-        function loadSessions(categoryKey, examKey) {
-            const sessionsByYear = ExamUtils.getSessionsByYear(categoryKey, examKey);
-            const container = document.getElementById('sessionContainer');
-            container.innerHTML = '';
-
-            if (Object.keys(sessionsByYear).length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📝</div>
-                        <p>등록된 회차가 없습니다.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const sortedYears = Object.keys(sessionsByYear).sort((a, b) => b - a);
-
-            sortedYears.forEach(year => {
-                const yearGroup = document.createElement('div');
-                yearGroup.className = 'year-group';
-                
-                const yearTitle = document.createElement('div');
-                yearTitle.className = 'year-title';
-                yearTitle.textContent = `${year}년`;
-                yearGroup.appendChild(yearTitle);
-
-                const grid = document.createElement('div');
-                grid.className = 'card-grid';
-
-                sessionsByYear[year].forEach(session => {
-                    const card = document.createElement('div');
-                    card.className = 'card session-card';
-                    card.setAttribute('data-session-id', session.id);
-                    card.innerHTML = `
-                        <div class="session-year">${session.session}회</div>
-                        <div class="card-title">${session.year}년 ${session.session}회차</div>
-                        <div class="session-info">
-                            ${session.questionCount}문제
-                        </div>
-                    `;
-                    card.onclick = () => selectSession(session, card);
-                    grid.appendChild(card);
-                });
-
-                yearGroup.appendChild(grid);
-                container.appendChild(yearGroup);
-            });
-        }
-
-        function selectSession(session, cardElement) {
-            selectedSession = session;
-            document.getElementById('startBtn').style.display = 'block';
-            
-            document.querySelectorAll('.session-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            cardElement.classList.add('selected');
-        }
-
-        function goBack() {
-            if (currentStep === 2) {
-                currentStep = 1;
-                selectedCategory = null;
-                document.getElementById('examSelection').style.display = 'none';
-                document.getElementById('categorySelection').style.display = 'block';
-                document.getElementById('backBtn').style.display = 'none';
-            } else if (currentStep === 3) {
-                currentStep = 2;
-                selectedExam = null;
-                selectedSession = null;
-                document.getElementById('sessionSelection').style.display = 'none';
-                document.getElementById('examSelection').style.display = 'block';
-                document.getElementById('startBtn').style.display = 'none';
-            }
-            
-            updateStepIndicator();
-            updateBreadcrumb();
-        }
-
-        function startQuiz() {
-            if (!selectedSession) {
-                alert('회차를 선택해주세요.');
-                return;
-            }
-
-            // fileName에서 .csv 제거하여 API 경로로 사용
-            const sessionId = selectedSession.fileName.replace('.csv', '');
-
-            const quizConfig = {
-                category: selectedCategory.key,
-                categoryName: selectedCategory.name,
-                exam: selectedExam.key,
-                examName: selectedExam.name,
-                session: sessionId,  // API 호출용 ID
-                sessionInfo: selectedSession,  // 전체 정보
-                files: [selectedSession.fileName]
-            };
-
-            localStorage.setItem('quizConfig', JSON.stringify(quizConfig));
-            localStorage.setItem('quizMode', 'full');
-            ExamStorage.saveSelection(selectedCategory.key, selectedExam.key, selectedSession);
-
-            console.log('Quiz Config:', quizConfig);
-            window.location.href = 'solve.html';
-        }
-
-        function updateStepIndicator() {
-            for (let i = 1; i <= 3; i++) {
-                const step = document.getElementById(`step${i}`);
-                if (i === currentStep) {
-                    step.classList.add('active');
-                } else {
-                    step.classList.remove('active');
-                }
-            }
-        }
-
-        function updateBreadcrumb() {
-            const breadcrumb = document.getElementById('breadcrumb');
-            let text = '';
-
-            if (selectedCategory) {
-                text += `<span>${selectedCategory.name}</span>`;
-            }
-            if (selectedExam) {
-                text += ` > <span>${selectedExam.name}</span>`;
-            }
-            if (selectedSession) {
-                text += ` > <span>${selectedSession.year}년 ${selectedSession.session}회</span>`;
-            }
-
-            if (text) {
-                breadcrumb.innerHTML = text;
-                breadcrumb.style.display = 'block';
-            } else {
-                breadcrumb.style.display = 'none';
-            }
-        }
-    </script>
-</body>
-</html><meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>시험 학습 시스템</title>
     <script src="exams-config.js"></script>
@@ -374,6 +123,10 @@
             background: linear-gradient(135deg, #2ecc71, #27ae60);
         }
 
+        .btn-user-guide {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
         .step-indicator {
             display: flex;
             justify-content: center;
@@ -424,11 +177,12 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 25px;
+            margin-bottom: 30px;
         }
 
-        .card {
+        .category-card, .exam-card {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border: 3px solid transparent;
+            border: 2px solid transparent;
             border-radius: 15px;
             padding: 30px;
             cursor: pointer;
@@ -437,120 +191,147 @@
             overflow: hidden;
         }
 
-        .card::before {
+        .category-card::before, .exam-card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(52, 152, 219, 0.15), transparent);
-            transition: left 0.6s;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .card:hover::before {
-            left: 100%;
+        .category-card:hover::before, .exam-card:hover::before {
+            opacity: 1;
         }
 
-        .card:hover {
+        .category-card:hover, .exam-card:hover {
             transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
             border-color: #3498db;
-            box-shadow: 0 15px 35px rgba(52, 152, 219, 0.3);
         }
 
-        .card-icon {
-            font-size: 3.5rem;
+        .category-card.selected, .exam-card.selected {
+            border-color: #3498db;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .category-icon, .exam-icon {
+            font-size: 3rem;
             margin-bottom: 15px;
             display: block;
         }
 
-        .card-title {
+        .category-name, .exam-name {
             font-size: 1.4rem;
             font-weight: bold;
             color: #2c3e50;
             margin-bottom: 10px;
         }
 
-        .card-meta {
+        .category-stats, .exam-stats {
             color: #7f8c8d;
             font-size: 0.95rem;
             line-height: 1.6;
         }
 
-        .card-badge {
-            position: absolute;
-            top: 15px;
-            right: 15px;
+        .data-badge {
+            display: inline-block;
             background: #2ecc71;
             color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
             font-weight: bold;
+            margin-top: 8px;
         }
 
-        .card-badge.empty {
+        .no-data-badge {
             background: #95a5a6;
+        }
+
+        .session-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .year-group {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 4px solid #3498db;
+        }
+
+        .year-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .session-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
         }
 
         .session-card {
             background: white;
-            border: 2px solid #ecf0f1;
-            padding: 25px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
         }
 
         .session-card:hover {
-            border-color: #e74c3c;
-            box-shadow: 0 15px 35px rgba(231, 76, 60, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            border-color: #3498db;
         }
 
         .session-card.selected {
-            border-color: #e74c3c;
-            background: #fff5f5;
-            transform: translateY(-5px);
+            border-color: #3498db;
+            background: #e3f2fd;
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.2);
         }
 
-        .session-year {
-            font-size: 1.6rem;
+        .session-number {
+            font-size: 1.8rem;
             font-weight: bold;
             color: #3498db;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .session-info {
             color: #7f8c8d;
             font-size: 0.9rem;
-            margin-top: 12px;
-        }
-
-        .year-group {
-            margin-bottom: 40px;
-        }
-
-        .year-title {
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            padding-left: 15px;
-            border-left: 5px solid #3498db;
         }
 
         .navigation-buttons {
             display: flex;
-            justify-content: space-between;
-            margin-top: 40px;
-            gap: 15px;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
         }
 
         .btn {
-            padding: 18px 45px;
+            padding: 15px 40px;
             border: none;
             border-radius: 12px;
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
+            color: white;
             position: relative;
             overflow: hidden;
         }
@@ -573,25 +354,17 @@
             height: 300px;
         }
 
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
         .btn-back {
             background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-            color: white;
         }
 
         .btn-start {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
         }
 
         .breadcrumb {
@@ -667,10 +440,13 @@
 
         <div class="main-nav" id="mainNav">
             <button class="nav-btn btn-new-quiz" onclick="showExamSelection()">
-                <span style="position: relative; z-index: 1;">새로 시작하기</span>
+                <span style="position: relative; z-index: 1;">📚 새로 시작하기</span>
             </button>
             <button class="nav-btn btn-dashboard" onclick="goToDashboard()">
-                <span style="position: relative; z-index: 1;">대시보드</span>
+                <span style="position: relative; z-index: 1;">📊 대시보드</span>
+            </button>
+            <button class="nav-btn btn-user-guide" onclick="window.location.href='user-guide.html'">
+                <span style="position: relative; z-index: 1;">📖 사용 가이드</span>
             </button>
         </div>
 
@@ -716,3 +492,266 @@
             </div>
         </div>
     </div>
+
+    <script>
+        const ExamStorage = {
+            saveSelection: function(category, exam, session) {
+                const data = {
+                    category: category,
+                    exam: exam,
+                    session: session,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('lastExamSelection', JSON.stringify(data));
+            },
+            
+            getLastSelection: function() {
+                const data = localStorage.getItem('lastExamSelection');
+                return data ? JSON.parse(data) : null;
+            }
+        };
+
+        let selectedCategory = null;
+        let selectedExam = null;
+        let selectedSession = null;
+        let currentStep = 1;
+
+        function showExamSelection() {
+            document.getElementById('mainNav').style.display = 'none';
+            document.getElementById('selectionContainer').style.display = 'block';
+            renderCategories();
+        }
+
+        function goToDashboard() {
+            const config = localStorage.getItem('quizConfig');
+            if (!config) {
+                alert('먼저 시험을 선택해주세요.');
+                showExamSelection();
+                return;
+            }
+            window.location.href = 'quiz.html';
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoryGrid');
+            grid.innerHTML = '';
+
+            Object.entries(EXAM_STRUCTURE).forEach(([key, category]) => {
+                const totalSessions = Object.values(category.exams)
+                    .reduce((sum, exam) => sum + exam.sessions.length, 0);
+                const totalQuestions = Object.values(category.exams)
+                    .reduce((sum, exam) => {
+                        return sum + exam.sessions.reduce((s, sess) => s + (sess.questionCount || 0), 0);
+                    }, 0);
+
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.innerHTML = `
+                    <span class="category-icon">${category.icon}</span>
+                    <div class="category-name">${category.displayName}</div>
+                    <div class="category-stats">
+                        ${Object.keys(category.exams).length}개 시험<br>
+                        ${totalSessions}개 회차<br>
+                        ${totalQuestions.toLocaleString()}개 문제
+                    </div>
+                `;
+                card.onclick = () => selectCategory(key, category);
+                grid.appendChild(card);
+            });
+        }
+
+        function selectCategory(key, category) {
+            selectedCategory = { key, name: category.displayName };
+            selectedExam = null;
+            selectedSession = null;
+            
+            currentStep = 2;
+            updateStepIndicator();
+            updateBreadcrumb();
+            
+            document.getElementById('categorySelection').style.display = 'none';
+            document.getElementById('examSelection').style.display = 'block';
+            document.getElementById('backBtn').style.display = 'inline-block';
+            
+            renderExams(category.exams);
+        }
+
+        function renderExams(exams) {
+            const grid = document.getElementById('examGrid');
+            grid.innerHTML = '';
+
+            Object.entries(exams).forEach(([key, exam]) => {
+                const hasData = exam.sessions.length > 0;
+                const totalQuestions = exam.sessions.reduce((sum, sess) => sum + (sess.questionCount || 0), 0);
+
+                const card = document.createElement('div');
+                card.className = 'exam-card';
+                if (!hasData) card.style.opacity = '0.6';
+                
+                card.innerHTML = `
+                    <span class="exam-icon">${exam.icon}</span>
+                    <div class="exam-name">${exam.displayName}</div>
+                    <div class="exam-stats">
+                        ${exam.sessions.length}개 회차<br>
+                        ${totalQuestions.toLocaleString()}개 문제
+                    </div>
+                    <span class="data-badge ${hasData ? '' : 'no-data-badge'}">
+                        ${hasData ? '데이터 있음' : '준비 중'}
+                    </span>
+                `;
+                
+                if (hasData) {
+                    card.onclick = () => selectExam(key, exam);
+                }
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function selectExam(key, exam) {
+            selectedExam = { key, name: exam.displayName };
+            selectedSession = null;
+            
+            currentStep = 3;
+            updateStepIndicator();
+            updateBreadcrumb();
+            
+            document.getElementById('examSelection').style.display = 'none';
+            document.getElementById('sessionSelection').style.display = 'block';
+            
+            renderSessions(exam.sessions);
+        }
+
+        function renderSessions(sessions) {
+            const container = document.getElementById('sessionContainer');
+            container.innerHTML = '';
+
+            const sessionsByYear = {};
+            sessions.forEach(session => {
+                if (!sessionsByYear[session.year]) {
+                    sessionsByYear[session.year] = [];
+                }
+                sessionsByYear[session.year].push(session);
+            });
+
+            const sortedYears = Object.keys(sessionsByYear).sort((a, b) => b - a);
+
+            sortedYears.forEach(year => {
+                const yearGroup = document.createElement('div');
+                yearGroup.className = 'year-group';
+                
+                const yearSessions = sessionsByYear[year].sort((a, b) => a.session - b.session);
+                
+                yearGroup.innerHTML = `
+                    <div class="year-title">📅 ${year}년</div>
+                    <div class="session-grid" id="year-${year}"></div>
+                `;
+                
+                container.appendChild(yearGroup);
+                
+                const grid = document.getElementById(`year-${year}`);
+                yearSessions.forEach(session => {
+                    const card = document.createElement('div');
+                    card.className = 'session-card';
+                    card.innerHTML = `
+                        <div class="session-number">${session.session}회</div>
+                        <div class="session-info">${session.questionCount || 0}문제</div>
+                    `;
+                    card.onclick = () => selectSession(session);
+                    grid.appendChild(card);
+                });
+            });
+
+            document.getElementById('startBtn').style.display = 'inline-block';
+        }
+
+        function selectSession(session) {
+            document.querySelectorAll('.session-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.target.closest('.session-card').classList.add('selected');
+            
+            selectedSession = session;
+            updateBreadcrumb();
+        }
+
+        function goBack() {
+            if (currentStep === 3) {
+                currentStep = 2;
+                selectedSession = null;
+                document.getElementById('sessionSelection').style.display = 'none';
+                document.getElementById('examSelection').style.display = 'block';
+                document.getElementById('startBtn').style.display = 'none';
+            } else if (currentStep === 2) {
+                currentStep = 1;
+                selectedExam = null;
+                document.getElementById('examSelection').style.display = 'none';
+                document.getElementById('categorySelection').style.display = 'block';
+                document.getElementById('backBtn').style.display = 'none';
+            }
+            
+            updateStepIndicator();
+            updateBreadcrumb();
+        }
+
+        function startQuiz() {
+            if (!selectedSession) {
+                alert('회차를 선택해주세요.');
+                return;
+            }
+
+            const sessionId = selectedSession.fileName.replace('.csv', '');
+
+            const quizConfig = {
+                category: selectedCategory.key,
+                categoryName: selectedCategory.name,
+                exam: selectedExam.key,
+                examName: selectedExam.name,
+                session: sessionId,
+                sessionInfo: selectedSession,
+                files: [selectedSession.fileName]
+            };
+
+            localStorage.setItem('quizConfig', JSON.stringify(quizConfig));
+            localStorage.setItem('quizMode', 'full');
+            ExamStorage.saveSelection(selectedCategory.key, selectedExam.key, selectedSession);
+
+            console.log('Quiz Config:', quizConfig);
+            window.location.href = 'solve.html';
+        }
+
+        function updateStepIndicator() {
+            for (let i = 1; i <= 3; i++) {
+                const step = document.getElementById(`step${i}`);
+                if (i === currentStep) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            }
+        }
+
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            let text = '';
+
+            if (selectedCategory) {
+                text += `<span>${selectedCategory.name}</span>`;
+            }
+            if (selectedExam) {
+                text += ` > <span>${selectedExam.name}</span>`;
+            }
+            if (selectedSession) {
+                text += ` > <span>${selectedSession.year}년 ${selectedSession.session}회</span>`;
+            }
+
+            if (text) {
+                breadcrumb.innerHTML = text;
+                breadcrumb.style.display = 'block';
+            } else {
+                breadcrumb.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
