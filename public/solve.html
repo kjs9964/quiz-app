@@ -1052,6 +1052,9 @@
                 
                 let optionText = question[option] || `선택지 ${labels[index]}`;
                 
+                // 선택지도 이중 백슬래시 변환
+                optionText = optionText.replace(/\\\\/g, '\\');
+                
                 div.innerHTML = `
                     <div class="option-label">${labels[index]}</div>
                     <div class="option-content">${optionText}</div>
