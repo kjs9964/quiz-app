@@ -183,7 +183,7 @@
         
         .question-text {
             font-size: 1.3rem;
-            line-height: 1.6;
+            line-height: 1.8;
             color: #2c3e50;
             margin-bottom: 30px;
             font-weight: 500;
@@ -195,6 +195,61 @@
             margin: 20px 0;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .image-notice {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .image-notice::before {
+            content: "🖼️";
+            font-size: 1.5rem;
+        }
+
+        /* 마크다운 표 스타일 */
+        .question-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border: 2px solid #3498db;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .question-table td {
+            padding: 12px 15px;
+            border: 1px solid #bdc3c7;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .question-table tr:first-child {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .question-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .question-table tr:hover {
+            background: #e3f2fd;
+        }
+
+        /* MathJax 수식 스타일 */
+        .MathJax, .mjx-chtml {
+            font-size: 1.15em !important;
+            margin: 5px 0;
         }
         
         .options {
@@ -251,6 +306,11 @@
             margin-right: 20px;
             font-size: 1.3rem;
             flex-shrink: 0;
+        }
+
+        .option-content {
+            flex: 1;
+            line-height: 1.6;
         }
         
         .option.selected {
@@ -557,6 +617,11 @@
                 width: 100%;
                 justify-content: space-between;
             }
+
+            .question-table td {
+                padding: 8px 10px;
+                font-size: 0.95rem;
+            }
         }
     </style>
 </head>
@@ -744,6 +809,27 @@
             return `${session}_${subject}_${qid}_${qtext}`;
         }
 
+        // 마크다운 표를 HTML 테이블로 변환하는 함수
+        function convertMarkdownTable(text) {
+            const lines = text.split('\\n').map(line => line.trim()).filter(line => line);
+            
+            if (lines.length < 2) return text;
+            
+            let html = '<table class="question-table">';
+            
+            lines.forEach((line, idx) => {
+                html += '<tr>';
+                const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+                cells.forEach(cell => {
+                    html += `<td>${cell}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            return html;
+        }
+
         async function loadQuestions(isResume = false) {
             try {
                 if (mode === 'wrong' || mode === 'bookmark' || mode === 'subject') {
@@ -759,7 +845,6 @@
                     totalQuestions = currentQuestions.length;
                     
                 } else {
-                    // config.session은 이제 문자열 ID (예: "constructionsafety20031")
                     const sessionId = config.session;
                     
                     if (!sessionId) {
@@ -853,6 +938,21 @@
             return modeNames[mode] || '문제 풀이';
         }
 
+        // MathJax 안전 렌더링 함수 (개선됨)
+        function renderMathJax(element) {
+            if (!element) return;
+            
+            if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                MathJax.typesetPromise([element]).catch((err) => {
+                    console.log('MathJax 렌더링 오류:', err);
+                });
+            } else if (typeof MathJax !== 'undefined' && MathJax.Hub) {
+                MathJax.Hub.Queue(['Typeset', MathJax.Hub, element]);
+            } else {
+                setTimeout(() => renderMathJax(element), 100);
+            }
+        }
+
         function displayQuestion() {
             if (currentQuestionIndex >= currentQuestions.length) {
                 showCompletionScreen();
@@ -870,21 +970,47 @@
             document.getElementById('questionMeta').textContent = metaInfo.length > 0 ? `(${metaInfo.join(' ')})` : '';
             
             const questionTextDiv = document.getElementById('questionText');
-            questionTextDiv.innerHTML = question.question || '문제 내용이 없습니다.';
+            let questionText = question.question || '문제 내용이 없습니다.';
             
-            if (question.questionImage && question.questionImage.trim() !== '') {
-                const imgElement = document.createElement('img');
-                imgElement.src = question.questionImage;
-                imgElement.className = 'question-image';
-                imgElement.alt = '문제 이미지';
-                imgElement.onerror = function() {
-                    this.style.display = 'none';
-                    console.warn('이미지 로드 실패:', question.questionImage);
-                };
-                questionTextDiv.appendChild(imgElement);
+            // \n을 <br>로 변환하되, 표 형식이면 테이블로 변환
+            if (questionText.includes('\\n') && questionText.includes('|')) {
+                questionText = convertMarkdownTable(questionText);
+            } else {
+                questionText = questionText.replace(/\\n/g, '<br>');
             }
             
-            // MathJax 렌더링 (안전하게)
+            questionTextDiv.innerHTML = questionText;
+            
+            // 이미지 포함 여부 확인
+            const hasImage = question.questionImage && 
+                            question.questionImage.trim() !== '' && 
+                            question.questionImage.toUpperCase() !== 'X';
+            
+            if (hasImage) {
+                if (question.questionImage.toUpperCase() === 'O') {
+                    // 이미지가 있다는 표시만 있는 경우
+                    const imageNotice = document.createElement('div');
+                    imageNotice.className = 'image-notice';
+                    imageNotice.innerHTML = '<strong>이 문제에는 이미지가 포함되어 있습니다.</strong><br>원본 시험지를 참고하세요.';
+                    questionTextDiv.appendChild(imageNotice);
+                } else {
+                    // 실제 이미지 URL이 있는 경우
+                    const imgElement = document.createElement('img');
+                    imgElement.src = question.questionImage;
+                    imgElement.className = 'question-image';
+                    imgElement.alt = '문제 이미지';
+                    imgElement.onerror = function() {
+                        this.style.display = 'none';
+                        const imageNotice = document.createElement('div');
+                        imageNotice.className = 'image-notice';
+                        imageNotice.innerHTML = '<strong>이미지를 불러올 수 없습니다.</strong><br>원본 시험지를 참고하세요.';
+                        questionTextDiv.appendChild(imageNotice);
+                    };
+                    questionTextDiv.appendChild(imgElement);
+                }
+            }
+            
+            // MathJax 렌더링
             renderMathJax(questionTextDiv);
             
             document.getElementById('currentNum').textContent = currentQuestionIndex + 1;
@@ -924,11 +1050,19 @@
                     };
                 })(labels[index], index + 1);
                 
+                let optionText = question[option] || `선택지 ${labels[index]}`;
+                
                 div.innerHTML = `
                     <div class="option-label">${labels[index]}</div>
-                    <div style="flex: 1;">${question[option] || `선택지 ${labels[index]}`}</div>
+                    <div class="option-content">${optionText}</div>
                 `;
                 container.appendChild(div);
+                
+                // 선택지에도 MathJax 렌더링 적용
+                const optionContent = div.querySelector('.option-content');
+                if (optionContent) {
+                    renderMathJax(optionContent);
+                }
             });
 
             document.getElementById('feedback').style.display = 'none';
@@ -936,26 +1070,9 @@
             updateAccuracyRate();
         }
 
-        // MathJax 안전 렌더링 함수
-        function renderMathJax(element) {
-            if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
-                MathJax.typesetPromise([element]).catch((err) => {
-                    console.log('MathJax 렌더링 오류:', err);
-                });
-            } else if (typeof MathJax !== 'undefined' && MathJax.Hub) {
-                MathJax.Hub.Queue(['Typeset', MathJax.Hub, element]);
-            } else {
-                console.log('MathJax가 아직 로드되지 않았습니다.');
-                setTimeout(() => renderMathJax(element), 100);
-            }
-        }
-
         function selectAnswer(element, letter, number) {
             const question = currentQuestions[currentQuestionIndex];
             const correctAnswer = question.answer;
-            
-            console.log('선택한 답:', letter, number);
-            console.log('정답:', correctAnswer);
             
             const wasAnswered = questionAnswerState[currentQuestionIndex].answered;
             selectedAnswer = number;
@@ -967,7 +1084,6 @@
             });
 
             const isCorrect = checkAnswer(letter, number, correctAnswer);
-            console.log('정답 여부:', isCorrect);
             
             if (!wasAnswered) {
                 questionAnswerState[currentQuestionIndex].answered = true;
@@ -982,7 +1098,6 @@
                 showFeedback(false, `❌ 틀렸습니다. 정답은 ${correctAnswer}번입니다.`);
                 
                 const correctIndex = getCorrectOptionIndex(correctAnswer);
-                console.log('정답 인덱스:', correctIndex);
                 
                 if (correctIndex >= 0 && correctIndex < allOptions.length) {
                     allOptions[correctIndex].classList.add('correct');
@@ -1077,7 +1192,6 @@
                     };
                     wrongAnswers.push(wrongQuestion);
                     localStorage.setItem('wrongAnswers', JSON.stringify(wrongAnswers));
-                    console.log('오답 저장 완료:', questionId);
                 }
             } catch (e) {
                 console.error('오답 저장 오류:', e);
@@ -1371,7 +1485,6 @@
                 }
                 
                 localStorage.setItem('studyHistory', JSON.stringify(studyHistory));
-                console.log('📊 학습 기록 저장 완료:', record);
             } catch (e) {
                 console.error('학습 기록 저장 오류:', e);
             }
