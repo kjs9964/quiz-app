@@ -8,3 +8,4 @@ echo "public/data/*.pdf"
 
 .vercel/
    *.jsonpublic/data/*.pdf
+public/data/*.pdf
